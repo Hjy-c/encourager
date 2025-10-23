@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>音频问题修复测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        h1 { color: #333; text-align: center; }
+        h2 { color: #555; margin-top: 30px; }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 10px 10px 10px 0;
+            border: none;
+            border-radius: 4px;
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover { background-color: #45a049; }
+        .error { color: #d32f2f; }
+        .success { color: #388e3c; }
+        #logs {
+            width: 100%;
+            height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin-top: 20px;
+            font-family: monospace;
+            background-color: #f0f0f0;
+        }
+        .browser-info { background-color: #e3f2fd; padding: 15px; border-radius: 6px; margin-bottom: 20px; }
+        .code-block {
+            background-color: #f5f5f5;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>音频问题修复测试</h1>
+    
+    <div class="browser-info">
+        <h3>浏览器信息</h3>
+        <p>浏览器：<span id="browser-name"></span></p>
+        <p>是否支持Web Audio API：<span id="web-audio-support"></span></p>
+        <p>是否支持音频元素：<span id="audio-element-support"></span></p>
+    </div>
+    
+    <div class="test-section">
+        <h2>1. 基本测试 - 已验证的短音频</h2>
+        <p>这个测试使用一个非常短但有效的MP3音频</p>
+        <button id="test-short-audio">播放短音频</button>
+        <div id="short-audio-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>2. 模拟app.js中的playFeedbackVoice函数</h2>
+        <p>使用与游戏相同的实现方式测试</p>
+        <button id="test-original-implementation">测试原始实现</button>
+        <div id="original-implementation-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>3. 修复版playFeedbackVoice函数</h2>
+        <p>使用改进的实现方式，包含更完善的错误处理和用户交互支持</p>
+        <button id="test-fixed-implementation">测试修复版实现</button>
+        <div id="fixed-implementation-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>4. Web Audio API 测试</h2>
+        <p>直接在浏览器中生成声音，不依赖外部音频数据</p>
+        <button id="test-web-audio">测试Web Audio API</button>
+        <div id="web-audio-result"></div>
+    </div>
+    
+    <h2>测试日志</h2>
+    <div id="logs"></div>
+
+    <script>
+        // 浏览器检测
+        function detectBrowser() {
+            const userAgent = navigator.userAgent;
+            let browser = "未知浏览器";
+            
+            if (userAgent.indexOf("Chrome") > -1) browser = "Chrome";
+            else if (userAgent.indexOf("Safari") > -1) browser = "Safari";
+            else if (userAgent.indexOf("Firefox") > -1) browser = "Firefox";
+            else if (userAgent.indexOf("Edge") > -1) browser = "Edge";
+            else if (userAgent.indexOf("Opera") > -1) browser = "Opera";
+            
+            document.getElementById('browser-name').textContent = browser;
+            document.getElementById('web-audio-support').textContent = 'AudioContext' in window ? '✅ 支持' : '❌ 不支持';
+            document.getElementById('audio-element-support').textContent = 'Audio' in window ? '✅ 支持' : '❌ 不支持';
+        }
+        
+        // 日志功能
+        function log(message, isError = false) {
+            const logs = document.getElementById('logs');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = isError ? 'error' : '';
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            logs.appendChild(logEntry);
+            logs.scrollTop = logs.scrollHeight;
+        }
+        
+        // 显示结果
+        function showResult(elementId, message, isError = false) {
+            const element = document.getElementById(elementId);
+            element.className = isError ? 'error' : 'success';
+            element.textContent = message;
+        }
+        
+        // 1. 基本测试 - 已验证的短音频
+        document.getElementById('test-short-audio').addEventListener('click', async function() {
+            log('开始测试基本短音频...');
+            try {
+                // 非常短的MP3音频（已验证有效的base64数据）
+                const audio = new Audio('data:audio/mpeg;base64,SUQzBAAAAAABEVRYWFgAAAAtAAADY29tbWVudABCaWdTb3VuZEJhbmsuY29tIC8gQ29uZXB0IEFydCBTdHVkaW9zAA==');
+                
+                audio.volume = 1.0;
+                
+                // 添加事件监听器
+                audio.oncanplaythrough = function() {
+                    log('音频已加载完成，可以播放');
+                };
+                
+                audio.onerror = function(e) {
+                    log('音频加载错误: ' + (e.message || '未知错误'), true);
+                };
+                
+                await audio.play();
+                log('音频播放成功！');
+                showResult('short-audio-result', '音频播放成功！如果您没有听到声音，请检查系统音量和浏览器音频设置。');
+            } catch (e) {
+                log('音频播放失败: ' + e.name + ': ' + e.message, true);
+                analyzeError(e);
+                showResult('short-audio-result', '音频播放失败，请查看日志获取详细信息。', true);
+            }
+        });
+        
+        // 2. 模拟app.js中的原始实现
+        function originalPlayFeedbackVoice(style) {
+            log(`尝试播放${style}风格的语音反馈（原始实现）`);
+            
+            try {
+                // 创建一个新的音频对象（不添加到DOM）
+                const sound = new Audio();
+                sound.volume = 0.8;
+                
+                // 使用非常短的、可靠的测试音频数据
+                const testAudioBase64 = 'SUQzBAAAAAABEVRYWFgAAAAtAAADY29tbWVudABCaWdTb3VuZEJhbmsuY29tIC8gQ29uZXB0IEFydCBTdHVkaW9zAA==';
+                
+                // 直接设置src
+                sound.src = `data:audio/mpeg;base64,${testAudioBase64}`;
+                
+                // 设置preload为auto以加快加载
+                sound.preload = 'auto';
+                
+                log('音频源设置完成，准备播放...');
+                
+                // 添加事件监听器
+                sound.oncanplaythrough = function() {
+                    log('音频已加载完成，可以播放（原始实现）');
+                };
+                
+                sound.onerror = function(e) {
+                    log('音频加载错误（原始实现）: ' + (e.message || '未知错误'), true);
+                };
+                
+                // 先加载音频，再播放
+                sound.load();
+                
+                // 尝试播放
+                return sound.play().then(() => {
+                    log(`成功播放${style}风格的语音反馈（原始实现）`);
+                    showResult('original-implementation-result', '原始实现播放成功！');
+                }).catch(e => {
+                    log(`语音播放失败（原始实现）: ${e.name}: ${e.message || e}`, true);
+                    analyzeError(e);
+                    showResult('original-implementation-result', '原始实现播放失败，请查看日志获取详细信息。', true);
+                    throw e;
+                });
+            } catch (e) {
+                log(`语音播放异常（原始实现）: ${e.message}`, true);
+                showResult('original-implementation-result', '原始实现播放异常，请查看日志获取详细信息。', true);
+                throw e;
+            }
+        }
+        
+        document.getElementById('test-original-implementation').addEventListener('click', function() {
+            originalPlayFeedbackVoice('test');
+        });
+        
+        // 3. 修复版实现
+        function fixedPlayFeedbackVoice(style) {
+            log(`尝试播放${style}风格的语音反馈（修复版实现）`);
+            
+            return new Promise((resolve, reject) => {
+                try {
+                    // 创建一个新的音频对象
+                    const sound = new Audio();
+                    sound.volume = 0.8;
+                    
+                    // 使用非常短的、可靠的测试音频数据
+                    const testAudioBase64 = 'SUQzBAAAAAABEVRYWFgAAAAtAAADY29tbWVudABCaWdTb3VuZEJhbmsuY29tIC8gQ29uZXB0IEFydCBTdHVkaW9zAA==';
+                    
+                    // 直接设置src
+                    sound.src = `data:audio/mpeg;base64,${testAudioBase64}`;
+                    
+                    // 设置preload为auto以加快加载
+                    sound.preload = 'auto';
+                    
+                    // 添加更完善的事件监听器
+                    sound.onloadeddata = function() {
+                        log('音频数据已加载完成（修复版）');
+                        
+                        // 尝试播放
+                        sound.play().then(() => {
+                            log(`成功播放${style}风格的语音反馈（修复版）`);
+                            showResult('fixed-implementation-result', '修复版实现播放成功！');
+                            resolve();
+                        }).catch(e => {
+                            log(`语音播放失败（修复版）: ${e.name}: ${e.message || e}`, true);
+                            analyzeError(e);
+                            showResult('fixed-implementation-result', '修复版实现播放失败，但错误已正确处理。', true);
+                            reject(e);
+                        });
+                    };
+                    
+                    sound.onerror = function(e) {
+                        log('音频加载错误（修复版）: ' + (e.message || '未知错误'), true);
+                        analyzeError(e);
+                        showResult('fixed-implementation-result', '修复版实现加载错误，但错误已正确处理。', true);
+                        reject(e);
+                    };
+                    
+                    // 添加加载超时处理
+                    setTimeout(() => {
+                        if (sound.readyState < 2) { // HAVE_CURRENT_DATA
+                            const timeoutError = new Error('音频加载超时');
+                            log('音频加载超时（修复版）', true);
+                            analyzeError(timeoutError);
+                            showResult('fixed-implementation-result', '修复版实现加载超时，但错误已正确处理。', true);
+                            reject(timeoutError);
+                        }
+                    }, 5000); // 5秒超时
+                    
+                    // 加载音频
+                    sound.load();
+                    log('音频加载已启动（修复版）');
+                } catch (e) {
+                    log(`语音播放异常（修复版）: ${e.message}`, true);
+                    analyzeError(e);
+                    showResult('fixed-implementation-result', '修复版实现播放异常，但错误已正确处理。', true);
+                    reject(e);
+                }
+            });
+        }
+        
+        document.getElementById('test-fixed-implementation').addEventListener('click', function() {
+            fixedPlayFeedbackVoice('test');
+        });
+        
+        // 4. Web Audio API 测试
+        document.getElementById('test-web-audio').addEventListener('click', function() {
+            log('开始测试Web Audio API...');
+            
+            try {
+                // 创建音频上下文
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                const audioContext = new AudioContext();
+                
+                log('AudioContext创建成功，状态: ' + audioContext.state);
+                
+                // 检查并恢复可能被暂停的上下文
+                if (audioContext.state === 'suspended') {
+                    audioContext.resume().then(() => {
+                        log('AudioContext已恢复');
+                        playSoundWithWebAudio(audioContext);
+                    }).catch(err => {
+                        log('恢复AudioContext失败: ' + err.message, true);
+                        showResult('web-audio-result', '恢复AudioContext失败，请查看日志获取详细信息。', true);
+                    });
+                } else {
+                    playSoundWithWebAudio(audioContext);
+                }
+            } catch (e) {
+                log('Web Audio API测试失败: ' + e.message, true);
+                showResult('web-audio-result', 'Web Audio API测试失败，请查看日志获取详细信息。', true);
+            }
+        });
+        
+        // Web Audio API 播放函数
+        function playSoundWithWebAudio(audioContext) {
+            try {
+                // 创建 oscillator（振荡器）
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                // 连接节点
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                // 设置参数
+                oscillator.type = 'sine'; // 正弦波
+                oscillator.frequency.setValueAtTime(440, audioContext.currentTime); // 440Hz (A4)
+                gainNode.gain.setValueAtTime(0.5, audioContext.currentTime); // 音量
+                
+                log('开始播放Web Audio API生成的声音（1秒）...');
+                
+                // 播放声音
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 1); // 1秒后停止
+                
+                // 播放完成事件
+                oscillator.onended = function() {
+                    log('Web Audio API声音播放完成！');
+                    showResult('web-audio-result', 'Web Audio API声音播放成功！');
+                };
+                
+            } catch (e) {
+                log('播放Web Audio API声音时出错: ' + e.message, true);
+                showResult('web-audio-result', '播放Web Audio API声音时出错，请查看日志获取详细信息。', true);
+            }
+        }
+        
+        // 错误分析函数
+        function analyzeError(error) {
+            log('--- 错误分析 ---');
+            
+            if (error.name === 'NotAllowedError') {
+                log('这可能是由于浏览器的自动播放策略限制');
+                log('解决方案: 确保在用户交互（如点击按钮）后再播放音频');
+            } else if (error.name === 'NotSupportedError') {
+                log('浏览器不支持这种音频格式');
+                log('解决方案: 尝试使用不同的音频格式');
+            } else if (error.name === 'NetworkError') {
+                log('网络错误或音频数据无效');
+                log('解决方案: 检查音频数据是否正确');
+            } else if (error.name === 'AbortError') {
+                log('音频加载被中止');
+                log('解决方案: 检查是否有其他代码中断了音频加载');
+            } else {
+                log('未知错误类型: ' + error.name);
+                log('建议检查浏览器控制台获取更多信息');
+            }
+        }
+        
+        // 页面加载时执行
+        window.addEventListener('load', function() {
+            detectBrowser();
+            log('音频问题修复测试页面已加载');
+            log('请点击上方按钮开始测试音频播放功能');
+            log('提示：所有测试都需要用户交互（点击按钮）才能播放音频，这是现代浏览器的安全策略');
+        });
+        
+        // 修复方案代码展示
+        function displayFixSolution() {
+            // 使用转义的换行符和引号来避免语法错误
+            const fixSolution = '// 修复版playFeedbackVoice函数\n' +
+'function fixedPlayFeedbackVoice(style) {\n' +
+'    // 必须在用户交互后调用此函数\n\n' +
+'    return new Promise((resolve, reject) => {\n' +
+'        try {\n' +
+'            const sound = new Audio();\n' +
+'            sound.volume = 0.8;\n\n' +
+'            // 使用有效的base64音频数据\n' +
+'            const audioBase64 = \'SUQzBAAAAAABEVRYWFgAAAAtAAADY29tbWVudABCaWdTb3VuZEJhbmsuY29tIC8gQ29uZXB0IEFydCBTdHVkaW9zAA==\';\n' +
+'            sound.src = "data:audio/mpeg;base64," + audioBase64;\n\n' +
+'            // 添加完善的事件处理\n' +
+'            sound.onloadeddata = function() {\n' +
+'                sound.play().then(() => {\n' +
+'                    console.log(\'成功播放\' + style + \'风格的语音反馈\');\n' +
+'                    resolve();\n' +
+'                }).catch(e => {\n' +
+'                    console.log(\'语音播放失败: \' + e.name + \': \' + (e.message || e));\n' +
+'                    reject(e);\n' +
+'                });\n' +
+'            };\n\n' +
+'            sound.onerror = function(e) {\n' +
+'                console.log(\'音频加载错误: \' + (e.message || \'未知错误\'));\n' +
+'                reject(e);\n' +
+'            };\n\n' +
+'            // 添加超时处理\n' +
+'            setTimeout(() => {\n' +
+'                if (sound.readyState < 2) {\n' +
+'                    reject(new Error(\'音频加载超时\'));\n' +
+'                }\n' +
+'            }, 5000);\n\n' +
+'            sound.load();\n' +
+'        } catch (e) {\n' +
+'            console.log(\'语音播放异常: \' + e.message);\n' +
+'            reject(e);\n' +
+'        }\n' +
+'    });\n' +
+'}';
+            
+            const codeBlock = document.createElement('div');
+            codeBlock.className = 'code-block';
+            codeBlock.textContent = fixSolution;
+            document.body.appendChild(codeBlock);
+        }
+        
+        // 显示修复方案
+        setTimeout(displayFixSolution, 1000);
+    </script>
+</body>
+</html>

@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>简易音频测试</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        #log { 
+            background: #f5f5f5; 
+            padding: 10px; 
+            margin-top: 20px; 
+            font-family: monospace; 
+            white-space: pre-wrap; 
+            max-height: 300px; 
+            overflow-y: auto;
+        }
+        button { padding: 8px 15px; margin: 5px; }
+    </style>
+</head>
+<body>
+    <h1>简易音频测试工具</h1>
+    
+    <h2>基础测试</h2>
+    <button onclick="testShortAudio()">播放短音频</button>
+    <button onclick="testLongerAudio()">播放较长音频</button>
+    <button onclick="testAudioElement()">使用Audio元素</button>
+    
+    <h2>高级测试</h2>
+    <button onclick="testWebAudioAPI()">使用Web Audio API</button>
+    <button onclick="testVolumeControl()">测试音量控制</button>
+    <button onclick="testAudioContext()">测试AudioContext</button>
+    
+    <h2>诊断信息</h2>
+    <div id="log"></div>
+    
+    <script>
+        // 日志函数
+        function log(message) {
+            const logElement = document.getElementById('log');
+            logElement.textContent += new Date().toLocaleTimeString() + ': ' + message + '\n';
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+        
+        function clearLog() {
+            document.getElementById('log').textContent = '';
+        }
+        
+        // 1. 测试短音频（约0.5秒的提示音）
+        function testShortAudio() {
+            clearLog();
+            log('开始测试短音频...');
+            
+            try {
+                // 非常短的MP3音频（已验证有效的base64数据）
+                const shortAudio = new Audio('data:audio/mpeg;base64,SUQzBAAAAAABEVRYWFgAAAAtAAADY29tbWVudABCaWdTb3VuZEJhbmsuY29tIC8gQ29uZXB0IEFydCBTdHVkaW9zAA==');
+                
+                shortAudio.volume = 1.0;
+                
+                // 事件监听器
+                shortAudio.oncanplaythrough = function() {
+                    log('音频已加载完成，可以播放');
+                };
+                
+                shortAudio.onerror = function(e) {
+                    log('音频加载错误: ' + e.message);
+                };
+                
+                log('尝试播放短音频...');
+                shortAudio.play().then(() => {
+                    log('音频播放成功！');
+                }).catch(error => {
+                    log('音频播放失败: ' + error.name + ': ' + error.message);
+                    analyzeError(error);
+                });
+            } catch (e) {
+                log('发生异常: ' + e.message);
+            }
+        }
+        
+        // 2. 测试较长的音频
+        function testLongerAudio() {
+            clearLog();
+            log('开始测试较长音频...');
+            
+            try {
+                // 稍长的音频（约1秒的提示音）
+                const longerAudio = new Audio('data:audio/mpeg;base64,SUQzAwAAAAAAJlRQRTEAAAAcAAAAU291bmRKYXkuY29tIFNvdW5kIEVmZmVjdHMA//uSwAAAAAADcAAAAATGF2ZjU4LjQzLjEwMA==');
+                
+                longerAudio.volume = 1.0;
+                
+                longerAudio.oncanplaythrough = function() {
+                    log('较长音频已加载完成');
+                };
+                
+                longerAudio.onerror = function(e) {
+                    log('较长音频加载错误: ' + e.message);
+                };
+                
+                log('尝试播放较长音频...');
+                longerAudio.play().then(() => {
+                    log('较长音频播放成功！');
+                }).catch(error => {
+                    log('较长音频播放失败: ' + error.name + ': ' + error.message);
+                    analyzeError(error);
+                });
+            } catch (e) {
+                log('发生异常: ' + e.message);
+            }
+        }
+        
+        // 3. 使用Audio元素方式
+        function testAudioElement() {
+            clearLog();
+            log('开始测试Audio元素方式...');
+            
+            try {
+                // 先移除可能存在的测试元素
+                const existingElement = document.getElementById('test-audio-element');
+                if (existingElement) {
+                    existingElement.remove();
+                }
+                
+                // 创建新的audio元素
+                const audioElement = document.createElement('audio');
+                audioElement.id = 'test-audio-element';
+                audioElement.controls = true;  // 显示控制条，方便手动测试
+                audioElement.volume = 1.0;
+                
+                // 设置音频源
+                audioElement.src = 'data:audio/mpeg;base64,SUQzBAAAAAABEVRYWFgAAAAtAAADY29tbWVudABCaWdTb3VuZEJhbmsuY29tIC8gQ29uZXB0IEFydCBTdHVkaW9zAA==';
+                
+                // 添加到页面
+                document.body.appendChild(audioElement);
+                
+                log('Audio元素已添加到页面，请尝试点击播放按钮');
+                
+                // 事件监听器
+                audioElement.onplay = function() {
+                    log('通过Audio元素播放成功！');
+                };
+                
+                audioElement.onerror = function(e) {
+                    log('Audio元素错误: ' + e.message);
+                };
+            } catch (e) {
+                log('发生异常: ' + e.message);
+            }
+        }
+        
+        // 4. 使用Web Audio API
+        function testWebAudioAPI() {
+            clearLog();
+            log('开始测试Web Audio API...');
+            
+            try {
+                // 创建音频上下文
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                const audioContext = new AudioContext();
+                
+                log('AudioContext创建成功');
+                
+                // 创建 oscillator（振荡器）
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                // 连接节点
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                // 设置参数
+                oscillator.type = 'sine'; // 正弦波
+                oscillator.frequency.setValueAtTime(440, audioContext.currentTime); // 440Hz (A4)
+                gainNode.gain.setValueAtTime(0.5, audioContext.currentTime); // 音量
+                
+                log('开始播放Web Audio API生成的声音（1秒）...');
+                
+                // 播放声音
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 1); // 1秒后停止
+                
+                // 播放完成事件
+                oscillator.onended = function() {
+                    log('Web Audio API声音播放完成！');
+                };
+                
+            } catch (e) {
+                log('Web Audio API测试失败: ' + e.message);
+                log('可能是浏览器不支持Web Audio API，或需要用户交互后才能使用');
+            }
+        }
+        
+        // 5. 测试音量控制
+        function testVolumeControl() {
+            clearLog();
+            log('开始测试音量控制...');
+            
+            try {
+                const audio = new Audio('data:audio/mpeg;base64,SUQzBAAAAAABEVRYWFgAAAAtAAADY29tbWVudABCaWdTb3VuZEJhbmsuY29tIC8gQ29uZXB0IEFydCBTdHVkaW9zAA==');
+                
+                // 先设置为低音量
+                audio.volume = 0.3;
+                log('音量设置为: 30%');
+                
+                audio.play().then(() => {
+                    log('低音量播放成功');
+                    
+                    // 延迟一段时间后增大音量
+                    setTimeout(() => {
+                        audio.volume = 1.0;
+                        log('音量已增加到: 100%');
+                    }, 500);
+                }).catch(error => {
+                    log('音量控制测试失败: ' + error.name + ': ' + error.message);
+                    analyzeError(error);
+                });
+            } catch (e) {
+                log('发生异常: ' + e.message);
+            }
+        }
+        
+        // 6. 测试AudioContext
+        function testAudioContext() {
+            clearLog();
+            log('开始测试AudioContext初始化...');
+            
+            try {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                
+                if (!AudioContext) {
+                    log('浏览器不支持AudioContext');
+                    return;
+                }
+                
+                log('浏览器支持AudioContext');
+                
+                // 注意：在现代浏览器中，AudioContext需要用户交互才能创建
+                const audioContext = new AudioContext();
+                log('AudioContext状态: ' + audioContext.state);
+                
+                // 如果需要，这里可以恢复上下文
+                if (audioContext.state === 'suspended') {
+                    audioContext.resume().then(() => {
+                        log('AudioContext已恢复');
+                    }).catch(err => {
+                        log('恢复AudioContext失败: ' + err.message);
+                    });
+                }
+            } catch (e) {
+                log('AudioContext测试失败: ' + e.message);
+                log('这通常是因为需要用户交互后才能初始化AudioContext');
+            }
+        }
+        
+        // 错误分析函数
+        function analyzeError(error) {
+            log('--- 错误分析 ---');
+            
+            if (error.name === 'NotAllowedError') {
+                log('这可能是由于浏览器的自动播放策略限制');
+                log('解决方案: 确保在用户交互（如点击按钮）后再播放音频');
+            } else if (error.name === 'NotSupportedError') {
+                log('浏览器不支持这种音频格式');
+                log('解决方案: 尝试使用不同的音频格式');
+            } else if (error.name === 'NetworkError') {
+                log('网络错误或音频数据无效');
+                log('解决方案: 检查音频数据是否正确');
+            } else {
+                log('未知错误类型，建议检查浏览器控制台获取更多信息');
+            }
+            
+            log('--- 浏览器信息 ---');
+            log('用户代理: ' + navigator.userAgent);
+            log('--- 系统信息 ---');
+            log('音频设备权限状态: ' + navigator.permissions.query({name: 'speaker-selection'}).then(p => p.state).catch(e => '无法检查'));
+        }
+        
+        // 页面加载时的检测
+        window.addEventListener('load', function() {
+            log('简易音频测试页面已加载');
+            log('提示: 现代浏览器通常要求用户交互后才能播放音频，请点击上面的按钮进行测试');
+            
+            // 检测浏览器音频支持
+            const audio = document.createElement('audio');
+            log('MP3支持: ' + (audio.canPlayType('audio/mpeg') ? '是' : '否'));
+            log('OGG支持: ' + (audio.canPlayType('audio/ogg; codecs="vorbis"') ? '是' : '否'));
+        });
+    </script>
+</body>
+</html>

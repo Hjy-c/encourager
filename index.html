@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>人生刷题家 - 游戏化学习体验</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- 音效资源 -->
+    <audio id="cyber-select" preload="auto">
+        <source src="data:audio/mpeg;base64,SUQzAwAAAAAAJlRQRTEAAAAcAAAAU291bmRKYXkuY29tIFNvdW5kIEVmZmVjdHMA//uSwAAAAAADcAAAAATGF2ZjU4LjQzLjEwMA==" type="audio/mpeg">
+     </audio>
+    <audio id="heritage-select" preload="auto">
+        <source src="data:audio/mpeg;base64,SUQzAwAAAAAAJlRQRTEAAAAcAAAAU291bmRKYXkuY29tIFNvdW5kIEVmZmVjdHMA//uSwAAAAAADcAAAAATGF2ZjU4LjQzLjEwMA==" type="audio/mpeg">
+     </audio>
+    <audio id="space-select" preload="auto">
+        <source src="data:audio/mpeg;base64,SUQzAwAAAAAAJlRQRTEAAAAcAAAAU291bmRKYXkuY29tIFNvdW5kIEVmZmVjdHMA//uSwAAAAAADcAAAAATGF2ZjU4LjQzLjEwMA==" type="audio/mpeg">
+     </audio>
+    <audio id="math-select" preload="auto">
+        <source src="data:audio/mpeg;base64,SUQzAwAAAAAAJlRQRTEAAAAcAAAAU291bmRKYXkuY29tIFNvdW5kIEVmZmVjdHMA//uSwAAAAAADcAAAAATGF2ZjU4LjQzLjEwMA==" type="audio/mpeg">
+     </audio>
+    <audio id="story-progress" preload="auto">
+        <source src="data:audio/mpeg;base64,SUQzAwAAAAAAJlRQRTEAAAAcAAAAU291bmRKYXkuY29tIFNvdW5kIEVmZmVjdHMA//uSwAAAAAADcAAAAATGF2ZjU4LjQzLjEwMA==" type="audio/mpeg">
+     </audio>
+    <audio id="success-sound" preload="auto">
+        <source src="data:audio/mpeg;base64,SUQzAwAAAAAAJlRQRTEAAAAcAAAAU291bmRKYXkuY29tIFNvdW5kIEVmZmVjdHMA//uSwAAAAAADcAAAAATGF2ZjU4LjQzLjEwMA==" type="audio/mpeg">
+     </audio>
+</head>
+<body>
+    <div class="app-container">
+        <h1 class="app-title">人生刷题家</h1>
+        
+        <!-- 角色选择页面 -->
+        <div id="character-selection" class="step-container active">
+            <div class="character-selection-header">
+                <h2 class="character-selection-title">选择你的角色，开启专属冒险</h2>
+                <p class="character-selection-subtitle">挣脱千篇一律的枯燥日常，开启属于你的炫酷冒险之旅！每个角色都将带你探索不同的知识宇宙</p>
+            </div>
+            
+            <div class="character-cards-container">
+                <div class="character-card" data-character="cyber">
+                    <div class="character-avatar cyber-avatar">
+                        <i class="icon"></i>
+                    </div>
+                    <div class="character-info">
+                        <h3 class="character-name cyber-name">Cyber侦探</h3>
+                        <p class="character-slogan">数据世界的真相探索者</p>
+                        <p class="character-description">在数字洪流中寻找逻辑漏洞，用智慧破解虚拟迷局</p>
+                        <div class="progress-container">
+                            <div class="progress-bar">
+                                <div class="progress-fill cyber-progress"></div>
+                            </div>
+                            <div class="progress-info">
+                                <span class="cyber-completed">0</span>
+                                <span class="cyber-total">/ 5</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="character-card" data-character="heritage">
+                    <div class="character-avatar heritage-avatar">
+                        <i class="icon"></i>
+                    </div>
+                    <div class="character-info">
+                        <h3 class="character-name heritage-name">非遗守护人</h3>
+                        <p class="character-slogan">传统文化的现代传承者</p>
+                        <p class="character-description">在历史长河中挖掘知识宝藏，用学识守护文化基因</p>
+                        <div class="progress-container">
+                            <div class="progress-bar">
+                                <div class="progress-fill heritage-progress"></div>
+                            </div>
+                            <div class="progress-info">
+                                <span class="heritage-completed">0</span>
+                                <span class="heritage-total">/ 5</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="character-card" data-character="space">
+                    <div class="character-avatar space-avatar">
+                        <i class="icon"></i>
+                    </div>
+                    <div class="character-info">
+                        <h3 class="character-name space-name">星球开拓者</h3>
+                        <p class="character-slogan">星际文明的知识建筑师</p>
+                        <p class="character-description">在宇宙奥秘中探索科学规律，用智慧构建未来蓝图</p>
+                        <div class="progress-container">
+                            <div class="progress-bar">
+                                <div class="progress-fill space-progress"></div>
+                            </div>
+                            <div class="progress-info">
+                                <span class="space-completed">0</span>
+                                <span class="space-total">/ 5</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="character-card" data-character="math">
+                    <div class="character-avatar math-avatar">
+                        <i class="icon"></i>
+                    </div>
+                    <div class="character-info">
+                        <h3 class="character-name math-name">数学探索家</h3>
+                        <p class="character-slogan">用数学思维探索世界的奥秘</p>
+                        <p class="character-description">你将成为一名热爱数学的探索家，通过解决各种数学问题，揭示隐藏在数字背后的规律和美丽。</p>
+                        <div class="progress-container">
+                            <div class="progress-bar">
+                                <div class="progress-fill math-progress"></div>
+                            </div>
+                            <div class="progress-info">
+                                <span class="math-completed">0</span>
+                                <span class="math-total">/ 4</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 故事体验页面 -->
+        <div id="story-experience" class="step-container">
+            <div class="story-header">
+                <h2 id="story-title">故事标题</h2>
+            </div>
+            
+            <div class="story-content">
+                <p id="story-narration" class="story-narration">故事内容将在这里显示...</p>
+                
+                <div id="story-choices" class="story-choices">
+                    <!-- 故事选择项将动态生成 -->
+                </div>
+            </div>
+            
+            <div class="btn-actions">
+                <button id="next-story" class="btn btn-primary">继续</button>
+                <button id="back-to-selection" class="btn btn-secondary">返回角色选择</button>
+            </div>
+        </div>
+        
+        <!-- 战斗模式页面 -->
+        <div id="battle-mode" class="step-container battle-mode">
+            <div class="battle-header">
+                <div id="character-icon" class="character-icon">👤</div>
+                <h3 id="level-title" class="level-title">关卡标题</h3>
+                <p id="level-description" class="level-description">关卡描述将在这里显示...</p>
+            </div>
+            
+            <div class="battle-content">
+                <div id="question-container" class="question-container">
+                    <span class="question-number">第<span id="current-question">1</span>/<span id="total-questions">5</span>题</span>
+                    <span class="question-content">题目将在这里显示...</span>
+                </div>
+                
+                <div id="options-container" class="options-container">
+                    <!-- 选项将动态生成 -->
+                </div>
+                
+                <div id="feedback" class="feedback hidden">
+                    答题反馈将在这里显示...
+                </div>
+            </div>
+            
+            <div class="btn-actions">
+                <div class="btn-group primary-actions">
+                    <button id="next-question" class="btn btn-primary hidden">下一题</button>
+                    <button id="continue-btn" class="btn btn-primary hidden">继续闯关</button>
+                </div>
+                <div class="btn-group secondary-actions">
+                    <button id="back-to-story" class="btn btn-secondary">返回故事</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 成就弹窗 -->
+    <div id="achievement-modal" class="achievement-modal">
+        <div class="achievement-content">
+            <div id="achievement-icon" class="achievement-icon">🏆</div>
+            <h2 id="achievement-title-text" class="achievement-title">恭喜获得成就！</h2>
+            <p id="achievement-description" class="achievement-description">你已经成功完成了挑战！</p>
+            <button id="restart-journey" class="btn btn-primary">开始新的旅程</button>
+        </div>
+    </div>
+    
+    <script src="particles.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
