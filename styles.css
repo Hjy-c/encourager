@@ -161,7 +161,7 @@ body {
     width: 40px;
     height: 40px;
     background: linear-gradient(45deg, transparent 45%, #fff 45%, #fff 55%, transparent 55%),
-                linear-gradient(-45deg, transparent 45%, #fff 45%, #fff 55%, transparent 55%);
+    linear-gradient(-45deg, transparent 45%, #fff 45%, #fff 55%, transparent 55%);
     transform: rotate(45deg);
 }
 
@@ -228,7 +228,7 @@ body {
     position: relative;
 }
 
-.math-avatar .icon::before, 
+.math-avatar .icon::before,
 .math-avatar .icon::after {
     content: '';
     position: absolute;
@@ -752,6 +752,11 @@ body {
     background-color: rgba(255, 0, 0, 0.1);
 }
 
+/* 通用隐藏类 */
+.hidden {
+    display: none !important;
+}
+
 /* 成就弹窗样式 */
 .achievement-modal {
     position: fixed;
@@ -1031,27 +1036,27 @@ body {
     .app-container {
         padding: 15px;
     }
-    
+
     .app-title {
         font-size: 1.8rem;
     }
-    
+
     .character-card h3 {
         font-size: 1.4rem;
     }
-    
+
     .story-title, .battle-title {
         font-size: 1.5rem;
     }
-    
+
     .story-narration, .question-container {
         font-size: 1rem;
     }
-    
+
     .achievement-content {
         padding: 30px 20px;
     }
-    
+
     .btn {
         padding: 10px 20px;
         font-size: 0.9rem;
@@ -1062,23 +1067,23 @@ body {
     .app-title {
         font-size: 1.6rem;
     }
-    
+
     .step-container {
         padding: 20px 15px;
     }
-    
+
     .character-card {
         padding: 15px;
     }
-    
+
     .btn-actions {
         flex-direction: column;
     }
-    
+
     .achievement-icon {
         font-size: 3rem;
     }
-    
+
     .achievement-title {
         font-size: 1.6rem;
     }

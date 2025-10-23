@@ -37,7 +37,7 @@ class ParticleAnimation {
     createParticles() {
         this.particles = [];
         const particleCount = Math.floor((this.canvas.width * this.canvas.height) / 15000);
-        
+
         for (let i = 0; i < particleCount; i++) {
             const size = Math.random() * 3 + 1;
             const x = Math.random() * this.canvas.width;
@@ -45,7 +45,7 @@ class ParticleAnimation {
             const speedX = (Math.random() - 0.5) * 0.5;
             const speedY = (Math.random() - 0.5) * 0.5;
             const color = this.getRandomColor();
-            
+
             this.particles.push({
                 x, y, size, speedX, speedY, color
             });
@@ -122,7 +122,7 @@ class ParticleAnimation {
                 const forceDirectionX = dx / distance;
                 const forceDirectionY = dy / distance;
                 const force = (this.mouse.radius - distance) / this.mouse.radius;
-                
+
                 particle.x -= forceDirectionX * force * 3;
                 particle.y -= forceDirectionY * force * 3;
             }
@@ -137,11 +137,11 @@ class ParticleAnimation {
 
     animate() {
         if (!this.isRunning) return;
-        
+
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         this.updateParticles();
         this.connectParticles();
-        
+
         requestAnimationFrame(() => this.animate());
     }
 

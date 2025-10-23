@@ -1,4 +1,16 @@
 // 应用状态管理
+// 添加字符串哈希方法
+String.prototype.hashCode = function() {
+    let hash = 0;
+    if (this.length === 0) return hash;
+    for (let i = 0; i < this.length; i++) {
+        const char = this.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash; // 转换为32位整数
+    }
+    return hash;
+};
+
 const appState = {
     currentStep: 'selection', // selection, story, battle, achievement, tutorial
     selectedCharacter: null,
@@ -10,6 +22,7 @@ const appState = {
     levelAttempts: {}, // 记录每个关卡的尝试次数
     retryQuestions: [], // 存储需要重练的错题
     wrongAnswersCount: {}, // 记录每个关卡的错题数量
+    wrongQuestionIds: {}, // 记录每个关卡答错的不同题目ID集合
     shareProgress: { // 记录分享解锁进度
         totalShared: 0, // 总共成功分享的次数
         unlockedFeatures: [] // 已解锁的功能列表
@@ -282,7 +295,7 @@ const characters = {
             }
         }
     },
-    
+
     // 非遗守护人角色
     heritage: {
         name: '非遗守护人',
@@ -538,7 +551,7 @@ const characters = {
             }
         }
     },
-    
+
     // 星球开拓者角色
     space: {
         name: '星球开拓者',
@@ -794,7 +807,7 @@ const characters = {
             }
         }
     },
-    
+
     // 数学探索家角色
     math: {
         name: '数学探索家',
@@ -1068,11 +1081,11 @@ function updateCharacterProgress(characterId) {
     const completedLevels = getCompletedLevels(characterId);
     const totalLevels = characterTotalLevels[characterId];
     const progressPercentage = (completedLevels / totalLevels) * 100;
-    
+
     // 更新进度条宽度
     const progressFill = elements[`${characterId}ProgressFill`];
     const progressInfo = elements[`${characterId}ProgressInfo`];
-    
+
     if (progressFill && progressInfo) {
         progressFill.style.width = `${progressPercentage}%`;
         progressInfo.textContent = `${completedLevels}/${totalLevels}`;
@@ -1086,12 +1099,12 @@ function getCompletedLevels(characterId) {
         console.error('characters对象未定义');
         return 0;
     }
-    
+
     if (typeof characterId !== 'string') {
         console.error('characterId必须是字符串类型');
         return 0;
     }
-    
+
     // 从本地存储加载成就信息
     let achievements = [];
     try {
@@ -1099,23 +1112,23 @@ function getCompletedLevels(characterId) {
     } catch (error) {
         console.error('加载成就失败:', error);
     }
-    
+
     // 从analytics中获取关卡完成信息
     const completedLevel = appState?.analytics?.levelCompletions?.[characterId] || 0;
-    
+
     // 获取角色的成就定义，增加额外的错误检查
     const characterAchievements = (characters && characters[characterId] && characters[characterId].achievements) || {};
-    
+
     // 计算已完成的关卡数
     let count = 0;
-    
+
     // 检查characterTotalLevels是否存在
     if (typeof characterTotalLevels !== 'undefined' && characterTotalLevels[characterId]) {
         // 检查每个关卡成就是否已完成
         for (let i = 1; i <= characterTotalLevels[characterId]; i++) {
             const levelKey = `level${i}`;
             const levelAchievement = characterAchievements[levelKey];
-            
+
             if (levelAchievement && achievements.includes(levelAchievement.name)) {
                 count++;
             }
@@ -1123,7 +1136,7 @@ function getCompletedLevels(characterId) {
     } else {
         console.warn(`未找到角色${characterId}的总关卡数定义`);
     }
-    
+
     // 返回较大的值，确保进度条不会回退
     return Math.max(count, completedLevel);
 }
@@ -1132,7 +1145,7 @@ function getCompletedLevels(characterId) {
 const soundEffects = {
     // 音频上下文（懒加载）
     _audioContext: null,
-    
+
     // 获取或创建音频上下文
     _getAudioContext() {
         if (!this._audioContext) {
@@ -1143,24 +1156,24 @@ const soundEffects = {
                 console.error('创建AudioContext失败:', e);
             }
         }
-        
+
         // 确保音频上下文处于运行状态
         if (this._audioContext && this._audioContext.state === 'suspended') {
             this._audioContext.resume().catch(e => {
                 console.error('恢复AudioContext失败:', e);
             });
         }
-        
+
         return this._audioContext;
     },
-    
+
     // 播放角色选择音效
     playCharacterSelect(characterId) {
         // 使用Web Audio API播放简单的声音
         this._playSimpleSound(440, 0.1); // 440Hz，持续0.1秒
         console.log(`播放角色选择音效: ${characterId}`);
     },
-    
+
     // 播放故事进度音效
     playStoryProgress() {
         // 使用Web Audio API播放简单的声音序列
@@ -1168,7 +1181,7 @@ const soundEffects = {
         setTimeout(() => this._playSimpleSound(440, 0.1), 100); // 延迟100ms播放440Hz
         console.log('播放故事进度音效');
     },
-    
+
     // 播放成功音效
     playSuccess() {
         // 使用Web Audio API播放简单的成功音效
@@ -1177,18 +1190,18 @@ const soundEffects = {
         setTimeout(() => this._playSimpleSound(783.99, 0.2), 200); // G5
         console.log('播放成功音效');
     },
-    
+
     // 播放反馈语音 - 使用Web Audio API修复版
     playFeedbackVoice(style) {
         console.log(`尝试播放${style}风格的语音反馈（Web Audio API修复版）`);
-        
+
         try {
             const audioContext = this._getAudioContext();
             if (!audioContext) {
                 console.error('AudioContext不可用，无法播放声音');
                 return;
             }
-            
+
             // 根据风格选择不同的音高
             let frequency = 440; // 默认A4
             switch (style) {
@@ -1204,7 +1217,7 @@ const soundEffects = {
                 default:
                     frequency = 440; // A4
             }
-            
+
             // 播放反馈声音
             this._playSimpleSound(frequency, 0.5);
             console.log(`成功播放${style}风格的语音反馈（Web Audio API修复版）`);
@@ -1212,31 +1225,31 @@ const soundEffects = {
             console.error('播放语音过程中发生异常:', error);
         }
     },
-    
+
     // 通用的Web Audio API声音播放函数
     _playSimpleSound(frequency, duration) {
         try {
             const audioContext = this._getAudioContext();
             if (!audioContext) return;
-            
+
             // 创建振荡器和增益节点
             const oscillator = audioContext.createOscillator();
             const gainNode = audioContext.createGain();
-            
+
             // 连接节点
             oscillator.connect(gainNode);
             gainNode.connect(audioContext.destination);
-            
+
             // 设置参数
             oscillator.type = 'sine'; // 正弦波
             oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
-            
+
             // 设置音量（0.5表示中等音量）
             gainNode.gain.setValueAtTime(0.5, audioContext.currentTime);
-            
+
             // 添加淡出效果避免爆音
             gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
-            
+
             // 播放声音
             oscillator.start(audioContext.currentTime);
             oscillator.stop(audioContext.currentTime + duration);
@@ -1253,10 +1266,10 @@ const elements = {
     storyExperience: document.getElementById('story-experience'),
     battleMode: document.getElementById('battle-mode'),
     achievementModal: document.getElementById('achievement-modal'),
-    
+
     // 角色选择相关
     characterCards: document.querySelectorAll('.character-card'),
-    
+
     // 进度条相关元素
     cyberProgressFill: document.querySelector('.cyber-progress .progress-fill'),
     cyberProgressInfo: document.querySelector('.cyber-progress .progress-info'),
@@ -1266,14 +1279,14 @@ const elements = {
     spaceProgressInfo: document.querySelector('.space-progress .progress-info'),
     mathProgressFill: document.querySelector('.math-progress .progress-fill'),
     mathProgressInfo: document.querySelector('.math-progress .progress-info'),
-    
+
     // 故事体验相关
     storyTitle: document.getElementById('story-title'),
     storyNarration: document.getElementById('story-narration'),
     storyChoices: document.getElementById('story-choices'),
     nextStoryBtn: document.getElementById('next-story'),
     backToSelectionBtn: document.getElementById('back-to-selection'),
-    
+
     // 战斗模式相关
     battleTitle: document.getElementById('battle-title'),
     currentQuestion: document.getElementById('current-question'),
@@ -1283,18 +1296,18 @@ const elements = {
     feedback: document.getElementById('feedback'),
     nextQuestionBtn: document.getElementById('next-question'),
     backToStoryBtn: document.getElementById('back-to-story'),
-    
+
     // 成就弹窗相关
     achievementTitleText: document.getElementById('achievement-title-text'),
     achievementDescription: document.getElementById('achievement-description'),
     achievementIcon: document.getElementById('achievement-icon'),
     restartJourneyBtn: document.getElementById('restart-journey'),
-    
+
     // 关卡信息相关
     levelTitle: document.getElementById('level-title'),
     levelDescription: document.getElementById('level-description'),
     levelGoal: document.getElementById('level-goal'),
-    
+
     // 继续按钮
     continueBtn: document.getElementById('continue-btn')
 };
@@ -1311,7 +1324,7 @@ const characterTotalLevels = {
 function initApp() {
     // 加载本地存储的数据
     loadFromLocalStorage();
-    
+
     // 确保所有需要的状态字段都已初始化
     if (!appState.levelAttempts) {
         appState.levelAttempts = {
@@ -1320,11 +1333,11 @@ function initApp() {
             level3: 0
         };
     }
-    
+
     if (!appState.retryQuestions) {
         appState.retryQuestions = [];
     }
-    
+
     if (!appState.analytics) {
         appState.analytics = {
             totalPlays: 0,
@@ -1340,16 +1353,16 @@ function initApp() {
             purchasePrompts: 0
         };
     }
-    
+
     // 绑定事件监听器
     bindEventListeners();
-    
+
     // 更新UI显示
     updateUI();
-    
+
     // 更新所有角色的进度显示
     updateAllCharacterProgress();
-    
+
     // 延迟启动粒子动画，确保DOM完全加载
     setTimeout(() => {
         if (typeof startParticleAnimation === 'function') {
@@ -1369,15 +1382,15 @@ function bindEventListeners() {
             selectCharacter(characterId);
         });
     });
-    
+
     // 返回按钮事件
     elements.backToSelectionBtn.addEventListener('click', goBackToSelection);
     elements.backToStoryBtn.addEventListener('click', goBackToStory);
-    
+
     // 继续按钮事件
     elements.nextStoryBtn.addEventListener('click', nextStory);
     elements.nextQuestionBtn.addEventListener('click', nextQuestion);
-    
+
     // 重启旅程按钮事件
     elements.restartJourneyBtn.addEventListener('click', restartJourney);
 }
@@ -1387,17 +1400,17 @@ function selectCharacter(characterId) {
     appState.selectedCharacter = characterId;
     appState.currentStoryIndex = 0;
     appState.currentStep = 'story';
-    
+
     // 播放角色选择音效
     soundEffects.playCharacterSelect(characterId);
-    
+
     // 更新埋点数据
     appState.analytics.characterSelection[characterId]++;
     appState.analytics.totalPlays++;
-    
+
     // 保存到本地存储
     saveToLocalStorage();
-    
+
     // 更新UI
     updateUI();
 }
@@ -1405,13 +1418,13 @@ function selectCharacter(characterId) {
 // 下一个故事段落
 function nextStory() {
     if (!appState.selectedCharacter) return;
-    
+
     const character = characters[appState.selectedCharacter];
     appState.currentStoryIndex++;
-    
+
     // 播放故事进度音效
     soundEffects.playStoryProgress();
-    
+
     // 检查是否已经完成所有故事段落
     if (appState.currentStoryIndex >= character.story.length) {
         // 检查是否需要进入战斗模式
@@ -1420,7 +1433,7 @@ function nextStory() {
         }
         return;
     }
-    
+
     // 更新UI
     updateUI();
 }
@@ -1439,13 +1452,13 @@ function startBattle() {
         level2: 0,
         level3: 0
     };
-    
+
     // 更新埋点数据
     appState.analytics.storyConversion++;
-    
+
     // 保存到本地存储
     saveToLocalStorage();
-    
+
     // 更新UI
     updateUI();
 }
@@ -1453,10 +1466,10 @@ function startBattle() {
 // 选择答案
 function selectAnswer(index) {
     if (!appState.selectedCharacter) return;
-    
+
     const currentCharacter = characters[appState.selectedCharacter];
     const currentLevel = currentCharacter.levels[appState.currentLevel - 1];
-    
+
     // 判断是显示错题还是正常题目
     let question, isRetryQuestion = false;
     if (appState.retryQuestions.length > 0) {
@@ -1465,28 +1478,28 @@ function selectAnswer(index) {
     } else {
         question = currentLevel.questions[appState.currentQuestionIndex];
     }
-    
+
     const isCorrect = index === question.correctIndex;
-    
+
     if (isCorrect) {
         appState.score++;
-        
+
         // 如果是错题重练，从错题列表中移除
         if (isRetryQuestion) {
             appState.retryQuestions.shift();
         }
     } else {
         appState.lives--;
-        
+
         // 如果回答错误，将题目添加到错题列表末尾
         if (!isRetryQuestion) {
             appState.retryQuestions.push(question);
         }
     }
-    
+
     // 显示反馈
     showFeedback(isCorrect, question.explanation);
-    
+
     // 禁用所有选项
     const options = elements.optionsContainer.querySelectorAll('.option');
     options.forEach((option, i) => {
@@ -1497,10 +1510,10 @@ function selectAnswer(index) {
             option.classList.add('correct');
         }
     });
-    
+
     // 显示下一题按钮
     elements.nextQuestionBtn.classList.remove('hidden');
-    
+
     // 保存到本地存储
     saveToLocalStorage();
 }
@@ -1509,10 +1522,10 @@ function selectAnswer(index) {
 function generatePartialExplanation(explanation) {
     // 部分解析包含基本的解题思路和被马赛克遮挡的完整解析框架
     let partialContent = '';
-    
+
     // 计算解析完成度比例（部分解析显示约30%内容）
     const completionPercentage = 30;
-    
+
     partialContent += `
         <div class="explanation-section">
             <h4 class="explanation-title">🔍 解题思路</h4>
@@ -1524,68 +1537,79 @@ function generatePartialExplanation(explanation) {
             </div>
         </div>
         
-        <!-- 以下部分被马赛克遮挡 -->
+        <!-- 马赛克遮挡区域 - 优化为只显示一个带有动态效果的提示 -->
         <div class="explanation-section masked-section">
             <div class="masked-content">
-                <h4 class="explanation-title">📚 考查知识点</h4>
-                <p>这里隐藏了关键的知识点...</p>
+                <!-- 这里是被马赛克遮挡的完整解析内容 -->
             </div>
-            <div class="mask-overlay">
+            <div class="mask-overlay animated-mask">
                 <div class="mask-pattern"></div>
-                <div class="mask-text">
-                    <span class="lock-icon">🔒</span>
-                    <span>分享解锁剩余 ${100 - completionPercentage}% 内容</span>
-                </div>
-            </div>
-        </div>
-        
-        <div class="explanation-section masked-section">
-            <div class="masked-content">
-                <h4 class="explanation-title">🔍 解题过程</h4>
-                <div class="solution-steps">
-                    <div class="solution-step">
-                        <span class="step-icon">→</span>
-                        <span class="step-content">这里隐藏了详细的解题步骤...</span>
-                    </div>
-                </div>
-            </div>
-            <div class="mask-overlay">
-                <div class="mask-pattern"></div>
-                <div class="mask-text">
-                    <span class="lock-icon">🔒</span>
-                    <span>分享解锁剩余 ${100 - completionPercentage}% 内容</span>
-                </div>
-            </div>
-        </div>
-        
-        <div class="explanation-section masked-section">
-            <div class="masked-content">
-                <h4 class="explanation-title">⚠️ 常见误区</h4>
-                <p>这里隐藏了常见误区分析...</p>
-            </div>
-            <div class="mask-overlay">
-                <div class="mask-pattern"></div>
-                <div class="mask-text">
-                    <span class="lock-icon">🔒</span>
-                    <span>分享解锁剩余 ${100 - completionPercentage}% 内容</span>
-                </div>
-            </div>
-        </div>
-        
-        <div class="explanation-section masked-section">
-            <div class="masked-content">
-                <h4 class="explanation-title">💡 解题技巧</h4>
-                <p>这里隐藏了解题技巧分享...</p>
-            </div>
-            <div class="mask-overlay">
-                <div class="mask-pattern"></div>
-                <div class="mask-text">
+                <div class="mask-text pulse-animation">
                     <span class="lock-icon">🔒</span>
                     <span>分享解锁剩余 ${100 - completionPercentage}% 内容</span>
                 </div>
             </div>
         </div>`;
-    
+
+    // 添加动态效果样式
+    if (!document.getElementById('mask-animation-style')) {
+        const styleElement = document.createElement('style');
+        styleElement.id = 'mask-animation-style';
+        styleElement.textContent = `
+            @keyframes maskPulse {
+                0% { opacity: 0.8; transform: scale(1); }
+                50% { opacity: 1; transform: scale(1.02); }
+                100% { opacity: 0.8; transform: scale(1); }
+            }
+            .animated-mask .mask-text.pulse-animation {
+                animation: maskPulse 2s infinite;
+            }
+            .masked-section {
+                position: relative;
+                margin-bottom: 20px;
+                padding: 20px;
+                background-color: #f8f9fa;
+                border-radius: 8px;
+                overflow: hidden;
+            }
+            .mask-overlay {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                background-color: rgba(0, 0, 0, 0.6);
+                z-index: 1;
+            }
+            .mask-pattern {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCI+PGcgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmZmIiBzdHJva2Utd2lkdGg9IjEiPjxwYXRoIGQ9Ik0wIDBoMjB2MjBIMHoiLz48cGF0aCBkPSJNMjAgMjBoMjB2MjBIMjB6Ii8+PC9nPjwvc3ZnPg==');
+                opacity: 0.2;
+            }
+            .mask-text {
+                color: white;
+                font-weight: bold;
+                text-align: center;
+                padding: 15px;
+                background-color: rgba(108, 92, 231, 0.9);
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+                z-index: 2;
+            }
+            .lock-icon {
+                margin-right: 8px;
+            }
+        `;
+        document.head.appendChild(styleElement);
+    }
+
     return partialContent;
 }
 
@@ -1593,7 +1617,7 @@ function generatePartialExplanation(explanation) {
 function generateDetailedExplanation(explanation, question) {
     // 默认的详细解析，会根据传入的explanation和question内容进行增强
     let detailedContent = '';
-    
+
     // 1. 拆解题目考查的知识点
     if (question.knowledgePoint) {
         detailedContent += `
@@ -1608,7 +1632,7 @@ function generateDetailedExplanation(explanation, question) {
             <p>本题主要考查了解题者对相关概念的理解和应用能力。</p>
         </div>`;
     }
-    
+
     // 2. 分步骤演示解题过程
     let stepByStep = '';
     if (question.solutionSteps && Array.isArray(question.solutionSteps)) {
@@ -1636,13 +1660,13 @@ function generateDetailedExplanation(explanation, question) {
                 <span class="step-content">通过以上分析，可以得出正确答案。</span>
             </div>`;
     }
-    
+
     detailedContent += `
         <div class="explanation-section">
             <h4 class="explanation-title">🔍 解题过程</h4>
             <div class="solution-steps">${stepByStep}</div>
         </div>`;
-    
+
     // 3. 针对错误选项说明常见误区
     if (question.commonMistakes) {
         detailedContent += `
@@ -1657,7 +1681,7 @@ function generateDetailedExplanation(explanation, question) {
             <p>在解答此类题目时，容易忽略细节或混淆概念。请仔细审题，明确各个条件之间的关系。</p>
         </div>`;
     }
-    
+
     // 4. 补充同类题型的解题技巧
     if (question.solutionTips) {
         detailedContent += `
@@ -1672,7 +1696,7 @@ function generateDetailedExplanation(explanation, question) {
             <p>解决这类问题时，可以尝试：1) 仔细分析题目条件；2) 列出已知信息和要求；3) 逐步推导；4) 验证答案的合理性。</p>
         </div>`;
     }
-    
+
     return detailedContent;
 }
 
@@ -1686,14 +1710,14 @@ function showFeedback(isCorrect, explanation) {
     let question;
     const character = characters[appState.selectedCharacter];
     const currentLevel = character.levels[appState.currentLevel - 1];
-    
+
     // 判断是显示错题还是正常题目
     if (appState.retryQuestions.length > 0) {
         question = appState.retryQuestions[0];
     } else {
         question = currentLevel.questions[appState.currentQuestionIndex];
     }
-    
+
     // 多样化人物形象口吻的反馈文案
     const characterStyles = {
         '总裁': [
@@ -1732,7 +1756,7 @@ function showFeedback(isCorrect, explanation) {
             '痛快！你的解法如同行云流水，毫无凝滞，真乃高手！'
         ]
     };
-    
+
     let feedbackHTML = '';
     if (isCorrect) {
         // 随机选择一种人物风格
@@ -1740,15 +1764,15 @@ function showFeedback(isCorrect, explanation) {
         const randomStyle = styles[Math.floor(Math.random() * styles.length)];
         const styleMessages = characterStyles[randomStyle];
         const randomMessage = styleMessages[Math.floor(Math.random() * styleMessages.length)];
-        
+
         // 构建反馈HTML，不显示口吻标签
         feedbackHTML = `
             <div class="feedback-style">${randomMessage}</div>
         `;
-        
+
         // 播放对应口吻的语音反馈
         soundEffects.playFeedbackVoice(randomStyle);
-        
+
         // 如果有人生启示，以独立字体颜色突出显示
         if (question.lifeLesson) {
             feedbackHTML += `
@@ -1759,12 +1783,22 @@ function showFeedback(isCorrect, explanation) {
             `;
         }
     } else {
-        // 增加当前关卡的错题计数
+        // 增加当前关卡的错题计数（记录不同的题目）
         const levelKey = `level${appState.currentLevel}`;
-        appState.wrongAnswersCount[levelKey] = (appState.wrongAnswersCount[levelKey] || 0) + 1;
-        
-        // 根据错题数量决定显示完整解析还是部分解析
-        const wrongCount = appState.wrongAnswersCount[levelKey];
+        // 初始化答错题目集合
+        if (!appState.wrongQuestionIds) {
+            appState.wrongQuestionIds = {};
+        }
+        if (!appState.wrongQuestionIds[levelKey]) {
+            appState.wrongQuestionIds[levelKey] = new Set();
+        }
+
+        // 记录答错的题目ID（使用题目内容的哈希值作为ID）
+        const questionId = question.content.hashCode();
+        appState.wrongQuestionIds[levelKey].add(questionId);
+
+        // 根据答错的不同题目数量决定显示完整解析还是部分解析
+        const wrongCount = appState.wrongQuestionIds[levelKey].size;
         if (wrongCount <= 3) {
             // 前三个错题显示完整解析
             const detailedExplanation = generateDetailedExplanation(explanation, question);
@@ -1775,29 +1809,43 @@ function showFeedback(isCorrect, explanation) {
             const partialExplanation = generatePartialExplanation(explanation);
             const friendCountToUnlock = 3; // 每邀请3位好友可解锁新功能
             const unlockedFeature = '高级解析库'; // 解锁的新功能
-            
-            feedbackHTML = `<div class="feedback-wrong">回答错误。</div>
-                            <div class="detailed-explanation">${partialExplanation}</div>
-                            <div class="share-locked-explanation">
-                                <p>🎯 您已查看了本关卡的3个完整解析</p>
-                                <p>💡 分享给好友可解锁此解析的完整内容</p>
-                                <button class="share-button floating-button pulse-animation">分享好友解锁完整版</button>
-                                <div class="reward-info">
-                                    <div class="reward-icon">🎁</div>
-                                    <div class="reward-text">
-                                        <div class="reward-title">额外奖励</div>
-                                        <div class="reward-description">每成功邀请${friendCountToUnlock}人，可解锁${unlockedFeature}！</div>
+
+            // 检查是否已经显示过分享提示
+            const levelKey = `level${appState.currentLevel}`;
+            const sharePromptKey = `${levelKey}_sharePromptShown`;
+
+            // 首次触发时才显示分享提示区域
+            if (!appState[sharePromptKey]) {
+                feedbackHTML = `<div class="feedback-wrong">回答错误。</div>
+                                <div class="detailed-explanation">${partialExplanation}</div>
+                                <div class="share-locked-explanation">
+                                    <p>🎯 您已查看了本关卡的3个完整解析</p>
+                                    <p>💡 分享给好友可解锁此解析的完整内容</p>
+                                    <button class="share-button floating-button pulse-animation">分享好友解锁完整版</button>
+                                    <div class="reward-info">
+                                        <div class="reward-icon">🎁</div>
+                                        <div class="reward-text">
+                                            <div class="reward-title">额外奖励</div>
+                                            <div class="reward-description">每成功邀请${friendCountToUnlock}人，可解锁${unlockedFeature}！</div>
+                                        </div>
                                     </div>
-                                </div>
-                            </div>`;
+                                </div>`;
+
+                // 标记此关卡已经显示过分享提示
+                appState[sharePromptKey] = true;
+            } else {
+                // 后续只显示部分解析，不重复显示分享提示
+                feedbackHTML = `<div class="feedback-wrong">回答错误。</div>
+                                <div class="detailed-explanation">${partialExplanation}</div>`;
+            }
         }
     }
-    
+
     // 增加当前关卡的尝试次数（仅在回答错误时）
     if (!isCorrect) {
         const levelKey = `level${appState.currentLevel}`;
         appState.levelAttempts[levelKey] = (appState.levelAttempts[levelKey] || 0) + 1;
-        
+
         // 检查是否需要显示购买引导
         if (appState.levelAttempts[levelKey] >= 3) {
             // 显示购买引导弹窗
@@ -1806,11 +1854,12 @@ function showFeedback(isCorrect, explanation) {
             }, 1500);
         }
     }
-    
+
     elements.feedback.innerHTML = feedbackHTML;
     elements.feedback.className = `feedback ${isCorrect ? 'correct' : 'incorrect'}`;
     elements.feedback.classList.remove('hidden');
-    
+    elements.feedback.style.display = 'block'; // 明确设置display属性，确保可见
+
     // 为分享按钮添加点击事件监听
     if (!isCorrect) {
         const shareButton = elements.feedback.querySelector('.share-button');
@@ -1819,18 +1868,18 @@ function showFeedback(isCorrect, explanation) {
                 // 这里可以实现实际的分享逻辑
                 // 由于是模拟环境，我们只显示一个提示信息
                 alert('分享功能已触发！在实际环境中，这里会调用分享API或显示分享弹窗。');
-                
+
                 // 为了演示目的，点击后可以解锁当前解析
                 // 在实际应用中，这里应该等待用户完成分享操作后再解锁
                 const levelKey = `level${appState.currentLevel}`;
                 const wrongCount = appState.wrongAnswersCount[levelKey];
-                
+
                 if (wrongCount > 3) {
                     // 生成并显示完整解析
                     const detailedExplanation = generateDetailedExplanation(explanation, question);
                     const explanationElement = elements.feedback.querySelector('.detailed-explanation');
                     const lockedElement = elements.feedback.querySelector('.share-locked-explanation');
-                    
+
                     if (explanationElement && lockedElement) {
                         explanationElement.innerHTML = detailedExplanation;
                         lockedElement.innerHTML = '<p>🎉 恭喜！您已成功解锁完整解析！</p>';
@@ -1846,42 +1895,42 @@ function showFeedback(isCorrect, explanation) {
 // 进入下一题或下一关
 function nextQuestion() {
     if (!appState.selectedCharacter) return;
-    
+
     const character = characters[appState.selectedCharacter];
-    
+
     // 如果有错题需要重练，继续留在当前关卡
     if (appState.retryQuestions.length > 0) {
         updateBattleUI();
         return;
     }
-    
+
     const currentLevel = character.levels[appState.currentLevel - 1];
-    
+
     // 检查是否完成了当前关卡的所有题目
     if (appState.currentQuestionIndex >= currentLevel.questions.length) {
         // 完成当前关卡
         const levelKey = `level${appState.currentLevel}`;
-        
+
         // 重置关卡尝试次数
         appState.levelAttempts[levelKey] = 0;
-        
+
         // 显示关卡完成成就（如果有的话）
         const levelAchievement = character.achievements[levelKey];
         if (levelAchievement) {
             showAchievement(levelAchievement);
             return; // 如果显示了成就弹窗，就不再继续下面的逻辑
         }
-        
+
         // 记录关卡完成情况
         appState.analytics.levelCompletions[appState.selectedCharacter] = appState.currentLevel;
         saveToLocalStorage();
-        
+
         // 检查是否还有下一关
         const nextLevelIndex = appState.currentLevel;
         if (nextLevelIndex < character.levels.length) {
             // 准备下一关信息
             const nextLevel = character.levels[nextLevelIndex];
-            
+
             // 显示当前关卡成功信息和下一关卡引导提示
             elements.feedback.innerHTML = `
                 <div>${currentLevel.successMessage}</div>
@@ -1894,23 +1943,23 @@ function nextQuestion() {
             elements.feedback.style.backgroundColor = 'rgba(255, 255, 255, 0.95)';
             elements.feedback.style.borderRadius = '10px';
             elements.feedback.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
-            
+
             // 检查继续按钮是否存在，防止未定义错误
             if (elements.continueBtn) {
                 // 显示继续按钮
                 elements.continueBtn.textContent = '继续闯关';
                 elements.continueBtn.classList.remove('hidden');
-                
+
                 // 为继续按钮添加点击事件
                 elements.continueBtn.onclick = () => {
                     // 进入下一关
                     appState.currentLevel++;
                     appState.currentQuestionIndex = 0;
-                    
+
                     // 隐藏反馈和继续按钮
                     elements.feedback.style.display = 'none';
                     elements.continueBtn.classList.add('hidden');
-                    
+
                     // 更新UI，进入下一关的刷题界面
                     updateBattleUI();
                 };
@@ -1919,23 +1968,23 @@ function nextQuestion() {
                 if (elements.nextQuestionBtn) {
                     elements.nextQuestionBtn.textContent = '继续闯关';
                     elements.nextQuestionBtn.classList.remove('hidden');
-                    
+
                     // 临时存储原始点击事件处理程序
                     const originalNextQuestionHandler = elements.nextQuestionBtn.onclick;
-                    
+
                     // 设置临时点击事件处理程序
                     elements.nextQuestionBtn.onclick = () => {
                         // 进入下一关
                         appState.currentLevel++;
                         appState.currentQuestionIndex = 0;
-                        
+
                         // 隐藏反馈
                         elements.feedback.style.display = 'none';
-                        
+
                         // 恢复原始点击事件处理程序
                         elements.nextQuestionBtn.textContent = '下一题';
                         elements.nextQuestionBtn.onclick = originalNextQuestionHandler;
-                        
+
                         // 更新UI，进入下一关的刷题界面
                         updateBattleUI();
                     };
@@ -1961,7 +2010,7 @@ function showPurchasePrompt() {
     if (oldModal) {
         oldModal.remove();
     }
-    
+
     // 创建购买引导弹窗
     const purchaseModal = document.createElement('div');
     purchaseModal.id = 'purchase-modal';
@@ -1975,135 +2024,111 @@ function showPurchasePrompt() {
     purchaseModal.style.justifyContent = 'center';
     purchaseModal.style.alignItems = 'center';
     purchaseModal.style.zIndex = '1001';
-    
+
     const modalContent = document.createElement('div');
     modalContent.style.backgroundColor = 'white';
     modalContent.style.padding = '30px';
     modalContent.style.borderRadius = '10px';
     modalContent.style.textAlign = 'center';
-    modalContent.style.maxWidth = '500px';
+    modalContent.style.maxWidth = '400px';
     modalContent.style.width = '90%';
     modalContent.style.boxShadow = '0 4px 12px rgba(108, 92, 231, 0.3)';
-    
-    // 添加标题
-    const titleContainer = document.createElement('div');
-    titleContainer.style.marginBottom = '15px';
-    titleContainer.style.animation = 'modalPulse 2s infinite';
-    
-    const title = document.createElement('h2');
-    title.textContent = '突破学习瓶颈';
+
+    // 添加标题和描述
+    const title = document.createElement('h3');
+    title.textContent = '哎呀 看来你需要找专业人士加点buff了';
     title.style.color = '#6c5ce7';
-    title.style.margin = '0';
-    titleContainer.appendChild(title);
-    modalContent.appendChild(titleContainer);
-    
-    // 添加描述文本
-    const description = document.createElement('p');
-    description.style.marginBottom = '20px';
-    description.style.fontSize = '16px';
-    description.style.lineHeight = '1.5';
-    description.innerHTML = '<strong>别让错题阻碍你前进！</strong><br>你在这一关卡已经遇到了挑战，现在是时候获取专业帮助了。我们的<span style="color: #6c5ce7;">金牌导师1对1指导</span>能帮你：';
-    modalContent.appendChild(description);
-    
-    // 添加核心价值列表
-    const featureList = document.createElement('ul');
-    featureList.style.textAlign = 'left';
-    featureList.style.margin = '0 auto 25px auto';
-    featureList.style.maxWidth = '350px';
-    featureList.style.paddingLeft = '0';
-    featureList.style.listStyle = 'none';
-    
-    const features = [
-        '精准分析错误原因，避免重复犯错',
-        '掌握高效解题技巧，提升学习效率',
-        '快速突破关卡，重拾学习信心'
-    ];
-    
-    features.forEach(text => {
-        const featureItem = document.createElement('li');
-        featureItem.style.marginBottom = '12px';
-        featureItem.style.paddingLeft = '30px';
-        featureItem.style.position = 'relative';
-        featureItem.style.fontSize = '16px';
-        featureItem.style.lineHeight = '1.4';
-        
-        // 使用span元素显示勾选标记，确保兼容性
-        const checkMark = document.createElement('span');
-        checkMark.textContent = '✓';
-        checkMark.style.color = '#6c5ce7';
-        checkMark.style.fontWeight = 'bold';
-        checkMark.style.position = 'absolute';
-        checkMark.style.left = '0';
-        checkMark.style.top = '0';
-        
-        const textSpan = document.createElement('span');
-        textSpan.textContent = text;
-        
-        featureItem.appendChild(checkMark);
-        featureItem.appendChild(textSpan);
-        featureList.appendChild(featureItem);
-    });
-    
-    modalContent.appendChild(featureList);
-    
-    // 添加按钮容器
-    const buttonContainer = document.createElement('div');
-    buttonContainer.style.display = 'flex';
-    buttonContainer.style.gap = '15px';
-    buttonContainer.style.justifyContent = 'center';
-    
-    // 添加购买按钮
-    const purchaseButton = document.createElement('button');
-    purchaseButton.id = 'purchase-yes';
-    purchaseButton.textContent = '立即解锁导师指导';
-    purchaseButton.style.background = 'linear-gradient(135deg, #6c5ce7, #8e44ad)';
-    purchaseButton.style.color = 'white';
-    purchaseButton.style.border = 'none';
-    purchaseButton.style.padding = '12px 24px';
-    purchaseButton.style.borderRadius = '5px';
-    purchaseButton.style.cursor = 'pointer';
-    purchaseButton.style.fontSize = '16px';
-    purchaseButton.style.fontWeight = 'bold';
-    purchaseButton.style.boxShadow = '0 4px 12px rgba(108, 92, 231, 0.4)';
-    
+    title.style.margin = '0 0 20px 0';
+    title.style.fontSize = '18px';
+    title.style.lineHeight = '1.4';
+    modalContent.appendChild(title);
+
+    // 添加企业微信二维码容器
+    const qrContainer = document.createElement('div');
+    qrContainer.style.margin = '0 auto 20px auto';
+    qrContainer.style.width = '200px';
+    qrContainer.style.height = '200px';
+    qrContainer.style.display = 'flex';
+    qrContainer.style.justifyContent = 'center';
+    qrContainer.style.alignItems = 'center';
+    qrContainer.style.border = '1px solid #eee';
+    qrContainer.style.borderRadius = '8px';
+    qrContainer.style.background = 'white';
+
+    // 创建二维码图片（使用占位符SVG）
+    const qrCode = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    qrCode.setAttribute('width', '180');
+    qrCode.setAttribute('height', '180');
+    qrCode.setAttribute('viewBox', '0 0 180 180');
+
+    // 生成简单的二维码图案（实际应用中应替换为真实二维码）
+    let qrPattern = '';
+    const modules = 25;
+    const size = 180 / modules;
+
+    // 模拟二维码图案生成
+    for (let i = 0; i < modules; i++) {
+        for (let j = 0; j < modules; j++) {
+            // 创建三个角的定位图案
+            const isTopLeftCorner = (i < 7 && j < 7) && !(i > 1 && i < 5 && j > 1 && j < 5);
+            const isTopRightCorner = (i < 7 && j > modules - 8) && !(i > 1 && i < 5 && j > modules - 6 && j < modules - 2);
+            const isBottomLeftCorner = (i > modules - 8 && j < 7) && !(i > modules - 6 && i < modules - 2 && j > 1 && j < 5);
+
+            // 其他模块随机生成
+            const isRandomModule = Math.random() > 0.6;
+
+            if (isTopLeftCorner || isTopRightCorner || isBottomLeftCorner || isRandomModule) {
+                qrPattern += `<rect x="${i * size}" y="${j * size}" width="${size}" height="${size}" fill="black" />`;
+            }
+        }
+    }
+
+    // 在中心添加一个小图标占位符
+    qrPattern += `
+        <circle cx="90" cy="90" r="20" fill="white" stroke="black" stroke-width="2" />
+        <text x="90" y="95" text-anchor="middle" font-size="12" fill="black">企微</text>
+    `;
+
+    qrCode.innerHTML = qrPattern;
+    qrContainer.appendChild(qrCode);
+    modalContent.appendChild(qrContainer);
+
+    // 添加二维码说明文本
+    const qrText = document.createElement('p');
+    qrText.textContent = '长按识别二维码，添加企业微信获取专业指导';
+    qrText.style.color = '#666';
+    qrText.style.fontSize = '14px';
+    qrText.style.marginBottom = '25px';
+    modalContent.appendChild(qrText);
+
+    // 添加关闭按钮
+    const closeButton = document.createElement('button');
+    closeButton.textContent = '关闭';
+    closeButton.style.background = 'linear-gradient(135deg, #6c5ce7, #8e44ad)';
+    closeButton.style.color = 'white';
+    closeButton.style.border = 'none';
+    closeButton.style.padding = '12px 30px';
+    closeButton.style.borderRadius = '25px';
+    closeButton.style.cursor = 'pointer';
+    closeButton.style.fontSize = '16px';
+    closeButton.style.fontWeight = 'bold';
+    closeButton.style.boxShadow = '0 4px 12px rgba(108, 92, 231, 0.4)';
+    closeButton.style.width = '100%';
+
     // 添加悬停效果
-    purchaseButton.onmouseover = function() {
+    closeButton.onmouseover = function() {
         this.style.transform = 'translateY(-2px)';
         this.style.boxShadow = '0 6px 20px rgba(108, 92, 231, 0.5)';
         this.style.transition = 'all 0.3s ease';
     };
-    
-    purchaseButton.onmouseout = function() {
+
+    closeButton.onmouseout = function() {
         this.style.transform = 'translateY(0)';
         this.style.boxShadow = '0 4px 12px rgba(108, 92, 231, 0.4)';
     };
-    
-    // 添加取消按钮
-    const declineButton = document.createElement('button');
-    declineButton.id = 'purchase-no';
-    declineButton.textContent = '暂时不需要';
-    declineButton.style.backgroundColor = '#f1f1f1';
-    declineButton.style.color = '#666';
-    declineButton.style.border = '1px solid #ddd';
-    declineButton.style.padding = '12px 24px';
-    declineButton.style.borderRadius = '5px';
-    declineButton.style.cursor = 'pointer';
-    declineButton.style.fontSize = '16px';
-    
-    // 添加悬停效果
-    declineButton.onmouseover = function() {
-        this.style.backgroundColor = '#e8e8e8';
-        this.style.transition = 'all 0.3s ease';
-    };
-    
-    declineButton.onmouseout = function() {
-        this.style.backgroundColor = '#f1f1f1';
-    };
-    
-    buttonContainer.appendChild(purchaseButton);
-    buttonContainer.appendChild(declineButton);
-    modalContent.appendChild(buttonContainer);
-    
+
+    modalContent.appendChild(closeButton);
+
     // 添加动画样式到页面头部
     const styleId = 'purchase-modal-styles';
     let styleElement = document.getElementById(styleId);
@@ -2118,22 +2143,18 @@ function showPurchasePrompt() {
             50% { transform: scale(1.02); }
             100% { transform: scale(1); }
         }
+        #purchase-modal { animation: modalPulse 3s infinite; }
+        #purchase-modal svg { user-select: none; }
     `;
-    
+
     purchaseModal.appendChild(modalContent);
     document.body.appendChild(purchaseModal);
-    
-    // 购买按钮事件处理
-    purchaseButton.onclick = function() {
-        alert('感谢你的支持！私教服务即将上线，敬请期待！');
+
+    // 关闭按钮事件处理
+    closeButton.onclick = function() {
         purchaseModal.remove();
     };
-    
-    // 取消按钮事件处理
-    declineButton.onclick = function() {
-        purchaseModal.remove();
-    };
-    
+
     // 更新埋点数据
     appState.analytics.purchasePrompts = (appState.analytics.purchasePrompts || 0) + 1;
 }
@@ -2141,42 +2162,42 @@ function showPurchasePrompt() {
 // 显示成就
 function showAchievement(achievement = null) {
     if (!appState.selectedCharacter) return;
-    
+
     const character = characters[appState.selectedCharacter];
-    
+
     // 如果没有传入具体成就，则显示最终成就
     if (!achievement) {
         achievement = character.achievements.final;
     }
-    
+
     // 更新成就信息
     elements.achievementTitleText.textContent = `恭喜获得「${achievement.name}」`;
     elements.achievementDescription.textContent = achievement.description;
     elements.achievementIcon.textContent = achievement.icon;
-    
+
     // 添加角色主题色
     elements.achievementIcon.className = `achievement-icon ${appState.selectedCharacter}-theme`;
-    
+
     // 根据成就类型设置按钮文本
     if (achievement.name === character.achievements.final.name) {
         elements.restartJourneyBtn.textContent = '开启新的旅程';
     } else {
         elements.restartJourneyBtn.textContent = '继续闯关';
     }
-    
+
     // 显示成就弹窗
     appState.currentStep = 'achievement';
-    
+
     // 更新埋点数据
     appState.analytics.battleCompletion++;
-    
+
     // 保存成就到本地存储
     saveAchievementToLocalStorage(achievement.name);
     saveToLocalStorage();
-    
+
     // 更新UI
     updateUI();
-    
+
     // 更新所有角色的进度显示
     updateAllCharacterProgress();
 }
@@ -2197,14 +2218,14 @@ function goBackToStory() {
 function restartJourney() {
     // 隐藏成就弹窗
     elements.achievementModal.classList.remove('active');
-    
+
     const character = characters[appState.selectedCharacter];
-    
+
     // 检查当前是否是最终成就
     const currentAchievementName = elements.achievementTitleText.textContent.match(/「(.*?)」/);
-    const isFinalAchievement = currentAchievementName && 
-                              currentAchievementName[1] === character.achievements.final.name;
-    
+    const isFinalAchievement = currentAchievementName &&
+        currentAchievementName[1] === character.achievements.final.name;
+
     if (isFinalAchievement) {
         // 完成所有关卡后，重置游戏状态
         appState.currentStep = 'selection';
@@ -2222,7 +2243,7 @@ function restartJourney() {
         appState.currentLevel++;
         appState.currentQuestionIndex = 0;
     }
-    
+
     // 更新UI
     updateUI();
 }
@@ -2234,23 +2255,23 @@ function updateUI() {
     elements.storyExperience.classList.remove('active');
     elements.battleMode.classList.remove('active');
     elements.achievementModal.classList.remove('active');
-    
+
     // 根据当前步骤显示对应内容
     switch (appState.currentStep) {
         case 'selection':
             elements.characterSelection.classList.add('active');
             break;
-            
+
         case 'story':
             elements.storyExperience.classList.add('active');
             updateStoryUI();
             break;
-            
+
         case 'battle':
             elements.battleMode.classList.add('active');
             updateBattleUI();
             break;
-            
+
         case 'achievement':
             elements.achievementModal.classList.add('active');
             break;
@@ -2260,19 +2281,19 @@ function updateUI() {
 // 流式文字输出效果
 function typewriterEffect(element, text, callback) {
     if (!element || !text) return;
-    
+
     // 清空元素内容
     element.innerHTML = '';
-    
+
     let index = 0;
     const speed = 30; // 每个字符的延迟时间（毫秒）
-    
+
     // 提取文本中的角色名称和关键术语
     const characterName = characters[appState.selectedCharacter]?.name || '';
-    
+
     // 定义关键术语列表（可以根据不同角色动态生成）
     const techTerms = getTechTermsByCharacter(appState.selectedCharacter);
-    
+
     function typeNextChar() {
         if (index < text.length) {
             let currentChar = text.charAt(index);
@@ -2280,9 +2301,9 @@ function typewriterEffect(element, text, callback) {
             let charElement = document.createElement('span');
             charElement.className = 'typewriter-char';
             charElement.style.animationDelay = `${index * 0.02}s`;
-            
+
             let termFound = false;
-            
+
             // 检查是否是角色名称的开始
             if (nextChars.startsWith(characterName)) {
                 // 创建角色名称的span元素
@@ -2309,7 +2330,7 @@ function typewriterEffect(element, text, callback) {
                     termFound = true;
                 }
             }
-            
+
             // 普通字符
             if (!termFound) {
                 // 确保所有字符（包括空格）都能正确处理
@@ -2317,7 +2338,7 @@ function typewriterEffect(element, text, callback) {
                 element.appendChild(charElement);
                 index++;
             }
-            
+
             // 使用requestAnimationFrame确保流畅的动画
             requestAnimationFrame(() => {
                 setTimeout(typeNextChar, speed);
@@ -2329,7 +2350,7 @@ function typewriterEffect(element, text, callback) {
             }
         }
     }
-    
+
     // 开始打字效果
     typeNextChar();
 }
@@ -2342,17 +2363,17 @@ function getTechTermsByCharacter(characterId) {
         'space': ['宇宙', '星球', '黑洞', '星系', '太空站', '航天', '天文', '行星'],
         'math': ['数学', '几何', '代数', '概率', '统计', '数列', '方程', '计算']
     };
-    
+
     return techTermsMap[characterId] || [];
 }
 
 // 更新故事UI
 function updateStoryUI() {
     if (!appState.selectedCharacter) return;
-    
+
     const character = characters[appState.selectedCharacter];
     const storySection = character.story[appState.currentStoryIndex];
-    
+
     // 更新故事标题 - 优化为更具吸引力的文案
     const titleMap = {
         'cyber': `开启Cyber侦探的数字冒险`,
@@ -2360,18 +2381,18 @@ function updateStoryUI() {
         'space': `开启星球开拓者的星际探索`,
         'math': `开启数学探索家的人生之旅`
     };
-    
+
     // 如果找不到对应角色的标题，使用默认格式
     const storyTitle = titleMap[appState.selectedCharacter] || `开启${character.name}的精彩旅程`;
     elements.storyTitle.textContent = storyTitle;
-    
+
     // 使用流式文字输出效果更新故事内容
     typewriterEffect(elements.storyNarration, storySection.text, () => {
         // 文本输出完成后执行的操作
         // 例如显示选择项或继续按钮
         // 清除之前的选择项
         elements.storyChoices.innerHTML = '';
-        
+
         // 隐藏/显示继续按钮
         if (storySection.next) {
             elements.nextStoryBtn.classList.remove('hidden');
@@ -2384,16 +2405,16 @@ function updateStoryUI() {
 // 更新战斗UI
 function updateBattleUI() {
     if (!appState.selectedCharacter) return;
-    
+
     const character = characters[appState.selectedCharacter];
     const currentLevel = character.levels[appState.currentLevel - 1];
-    
+
     // 获取battle-header元素
     const battleHeader = elements.battleMode.querySelector('.battle-header');
-    
+
     // 获取角色图标元素
     const characterIcon = document.getElementById('character-icon');
-    
+
     // 角色图标映射表 - 使用更有趣、更具特色的表情符号
     const characterIcons = {
         'cyber': {
@@ -2424,13 +2445,13 @@ function updateBattleUI() {
             default: '🧩' // 默认拼图图标（代表探索未知）
         }
     };
-    
+
     // 设置角色图标
     if (characterIcon) {
         const characterMap = characterIcons[appState.selectedCharacter] || characterIcons.default;
         const icon = characterMap[appState.currentLevel] || characterMap.default;
         characterIcon.textContent = icon;
-        
+
         // 根据角色类型设置不同的图标背景颜色
         if (appState.selectedCharacter === 'cyber') {
             characterIcon.style.background = 'linear-gradient(135deg, rgba(0, 188, 212, 0.2), rgba(33, 150, 243, 0.2))';
@@ -2449,14 +2470,14 @@ function updateBattleUI() {
             characterIcon.style.borderColor = 'rgba(255, 255, 255, 0.3)';
         }
     }
-    
+
     // 检查是否为cyber侦探的第一个关卡
     if (appState.selectedCharacter === 'cyber' && appState.currentLevel === 1) {
         battleHeader.classList.add('cyber-first-level');
     } else {
         battleHeader.classList.remove('cyber-first-level');
     }
-    
+
     // 如果有错题需要重练，则优先显示错题
     let question;
     if (appState.retryQuestions.length > 0) {
@@ -2464,32 +2485,32 @@ function updateBattleUI() {
     } else {
         question = currentLevel.questions[appState.currentQuestionIndex];
     }
-    
+
     // 更新关卡标题
     if (elements.levelTitle && currentLevel.title) {
         elements.levelTitle.textContent = currentLevel.title;
     }
-    
+
     // 更新关卡描述
     if (elements.levelDescription && currentLevel.description) {
         elements.levelDescription.textContent = currentLevel.description;
     }
-    
+
     // 隐藏人生目标元素
     if (elements.levelGoal) {
         elements.levelGoal.classList.add('hidden');
     }
-    
+
     // 完全隐藏battle-title元素，不再显示'知识挑战'字样
     if (elements.battleTitle) {
         elements.battleTitle.classList.add('hidden');
     }
-    
+
     // 更新进度指示器
     const totalQuestionsInLevel = appState.retryQuestions.length > 0 ? appState.retryQuestions.length : currentLevel.questions.length;
     elements.currentQuestion.textContent = appState.currentQuestionIndex + 1;
     elements.totalQuestions.textContent = totalQuestionsInLevel;
-    
+
     // 更新题目内容
     const questionContentElement = elements.questionContainer.querySelector('.question-content');
     if (questionContentElement) {
@@ -2498,10 +2519,10 @@ function updateBattleUI() {
         // 回退方案，确保旧版HTML也能正常工作
         elements.questionContainer.textContent = question.content;
     }
-    
+
     // 清除之前的选项
     elements.optionsContainer.innerHTML = '';
-    
+
     // 添加选项
     question.options.forEach((option, index) => {
         const optionElement = document.createElement('div');
@@ -2510,10 +2531,20 @@ function updateBattleUI() {
         optionElement.addEventListener('click', () => selectAnswer(index));
         elements.optionsContainer.appendChild(optionElement);
     });
-    
-    // 隐藏反馈和下一题按钮
-    elements.feedback.classList.add('hidden');
-    elements.nextQuestionBtn.classList.add('hidden');
+
+    // 彻底清除并隐藏反馈内容，确保新题目不显示任何前序题目的解析或提示信息
+    if (elements.feedback) {
+        elements.feedback.innerHTML = ''; // 清空所有内容
+        elements.feedback.classList.add('hidden'); // 添加隐藏类
+        elements.feedback.style.display = 'none'; // 强制隐藏
+        // 移除特定类而不是重置整个className，避免影响基础样式
+        elements.feedback.classList.remove('correct', 'incorrect');
+    }
+
+    // 隐藏下一题按钮
+    if (elements.nextQuestionBtn) {
+        elements.nextQuestionBtn.classList.add('hidden');
+    }
 }
 
 // 保存到本地存储
