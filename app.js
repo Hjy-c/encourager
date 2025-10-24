@@ -2984,7 +2984,7 @@ function isWechat() {
 
 // 打开分享弹窗
 function openShareModal() {
-    const shareLink = window.location.href;
+    const shareLink = 'https://tonight-release.gaodun.com/';
     
     // 移动端处理
     if (isMobile()) {
@@ -3025,9 +3025,8 @@ function openShareModal() {
         }
     }
     
-    // PC端或降级方案：显示二维码分享弹窗
+    // PC端：显示复制链接功能
     shareLinkInput.value = shareLink;
-    generateQRCode(shareLink);
     shareModal.classList.add('active');
     soundEffects.playStoryProgress();
 }

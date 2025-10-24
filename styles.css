@@ -1739,6 +1739,7 @@ body::before {
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
     border: 1px solid rgba(255, 255, 255, 0.1);
     animation: slideUp 0.4s ease-out;
+    position: relative;
 }
 
 @keyframes slideUp {
@@ -1772,6 +1773,9 @@ body::before {
 }
 
 .share-close {
+    position: absolute;
+    top: 15px;
+    right: 15px;
     background: none;
     border: none;
     color: #ffffff;
@@ -1784,6 +1788,7 @@ body::before {
     justify-content: center;
     border-radius: 50%;
     transition: all 0.3s ease;
+    z-index: 10;
 }
 
 .share-close:hover {
