@@ -1474,37 +1474,37 @@ const soundEffects = {
             return;
         }
         
-        // 根据风格选择不同的鼓励语
+        // 根据风格选择不同的鼓励语(西安方言)
         const encouragements = {
             '总裁': [
-                '很好，思路清晰，逻辑严密。',
-                '不错，这个问题处理得很到位。',
-                '非常好，你已经掌握了其中的精髓。'
+                '嘹咋咧！思路清楚得很，逻辑严实得很。',
+                '额滴神，这个问题处理得美得很。',
+                '太嘹咋咧，你已经把里头的门道摸透咧。'
             ],
             '二次元': [
-                '哇塞，你超厉害的耶！',
-                '太棒啦，你一定是学霸吧！',
-                '好厉害，这个解法太神了！'
+                '我滴个乖乖，你太厉害咧！',
+                '美得太太，你肯定是学霸吧！',
+                '嘹得太太，这个解法神得很！'
             ],
             '萌妹': [
-                '哇，你好棒哦！',
-                '太厉害了啦，好崇拜你哦！',
-                '哇塞，完全正确呢！'
+                '哎呀咧，你太嘹咋咧！',
+                '厉害得太太，好崇拜你咧！',
+                '我滴个乖乖，全对咧！'
             ],
             '学者': [
-                '很好，你的解答展现了清晰的逻辑思维。',
-                '正确，你已经掌握了这个规律。',
-                '非常精彩，你已经触及到了问题的本质。'
+                '嘹得很，你的解答展现了清晰的逻辑思维。',
+                '对咧，你已经把这个规律摸透咧。',
+                '精彩得太太，你已经触及到问题的本质咧。'
             ],
             '武侠': [
-                '好！这一招使得妙！',
-                '不错！解法干脆利落！',
-                '妙哉！此等解题思路精妙绝伦！'
+                '好嘞！这一招使得妙得很！',
+                '额滴神！解法干脆利落！',
+                '美得太太！此等解题思路精妙绝伦！'
             ],
             'default': [
-                '回答正确！你真棒！',
-                '太好了！继续加油！',
-                '答对了！你很聪明！'
+                '回答对咧！你太嘹咋咧！',
+                '美得太太！接着再来！',
+                '答对咧！你脑子活泛得很！'
             ]
         };
         
@@ -2258,28 +2258,12 @@ function showFeedback(isCorrect, explanation) {
         const shareButton = elements.feedback.querySelector('.share-button');
         if (shareButton) {
             shareButton.addEventListener('click', () => {
-                // 这里可以实现实际的分享逻辑
-                // 由于是模拟环境，我们只显示一个提示信息
-                alert('分享功能已触发！在实际环境中，这里会调用分享API或显示分享弹窗。');
-
-                // 为了演示目的，点击后可以解锁当前解析
-                // 在实际应用中，这里应该等待用户完成分享操作后再解锁
-                const levelKey = `level${appState.currentLevel}`;
-                const wrongCount = appState.wrongAnswersCount[levelKey];
-
-                if (wrongCount > 3) {
-                    // 生成并显示完整解析
-                    const detailedExplanation = generateDetailedExplanation(explanation, question);
-                    const explanationElement = elements.feedback.querySelector('.detailed-explanation');
-                    const lockedElement = elements.feedback.querySelector('.share-locked-explanation');
-
-                    if (explanationElement && lockedElement) {
-                        explanationElement.innerHTML = detailedExplanation;
-                        lockedElement.innerHTML = '<p>🎉 恭喜！您已成功解锁完整解析！</p>';
-                        lockedElement.classList.remove('share-locked-explanation');
-                        lockedElement.classList.add('unlocked-explanation');
-                    }
-                }
+                // 打开分享弹窗
+                openShareModal();
+                
+                // 可选:分享成功后自动解锁完整解析
+                // 在实际应用中,这里可以在用户完成分享后再调用unlockFullExplanation()
+                // 当前为了演示,打开分享弹窗后用户可以选择复制链接或扫码分享
             });
         }
     }
@@ -2978,3 +2962,221 @@ function saveAchievementToLocalStorage(achievementName) {
 
 // 初始化应用
 initApp();
+
+// ============ 分享功能 ============
+const shareModal = document.getElementById('share-modal');
+const shareCloseBtn = shareModal.querySelector('.share-close');
+const shareLinkInput = document.getElementById('share-link-input');
+const copyLinkBtn = document.getElementById('copy-link-btn');
+const qrcodeContainer = document.getElementById('qrcode-container');
+
+let qrCodeInstance = null;
+
+// 检测是否为移动端
+function isMobile() {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+}
+
+// 检测是否在微信内置浏览器
+function isWechat() {
+    return /MicroMessenger/i.test(navigator.userAgent);
+}
+
+// 打开分享弹窗
+function openShareModal() {
+    const shareLink = window.location.href;
+    
+    // 移动端处理
+    if (isMobile()) {
+        if (isWechat()) {
+            // 在微信内置浏览器中，提示用户使用右上角分享
+            alert('📱 请点击右上角 ··· 菜单\n选择"分享给朋友"或"分享到朋友圈"\n\n分享后即可解锁完整解析！');
+            // 直接解锁（因为无法检测是否真的分享了）
+            setTimeout(() => {
+                unlockFullExplanation();
+            }, 1000);
+            return;
+        } else {
+            // 非微信移动端浏览器，尝试唤起微信分享
+            try {
+                // 尝试使用Web Share API（现代移动浏览器支持）
+                if (navigator.share) {
+                    navigator.share({
+                        title: '逻辑推理游戏 - 邀请你一起挑战！',
+                        text: '快来一起玩这个有趣的逻辑推理游戏吧！',
+                        url: shareLink
+                    }).then(() => {
+                        // 分享成功，解锁完整解析
+                        soundEffects.playStoryProgress();
+                        unlockFullExplanation();
+                    }).catch((err) => {
+                        // 用户取消分享或分享失败
+                        console.log('分享取消或失败:', err);
+                    });
+                    return;
+                } else {
+                    // 不支持Web Share API，提示复制链接
+                    alert('📱 您的浏览器不支持直接分享\n\n请复制以下链接分享给好友：\n' + shareLink);
+                }
+            } catch (err) {
+                console.error('分享失败:', err);
+                alert('📱 请复制链接分享给好友：\n' + shareLink);
+            }
+        }
+    }
+    
+    // PC端或降级方案：显示二维码分享弹窗
+    shareLinkInput.value = shareLink;
+    generateQRCode(shareLink);
+    shareModal.classList.add('active');
+    soundEffects.playStoryProgress();
+}
+
+// 关闭分享弹窗
+function closeShareModal() {
+    shareModal.classList.remove('active');
+    
+    // 清除二维码
+    if (qrCodeInstance) {
+        qrcodeContainer.innerHTML = '';
+        qrCodeInstance = null;
+    }
+}
+
+// 生成二维码
+function generateQRCode(url) {
+    // 清除旧的二维码
+    if (qrCodeInstance) {
+        qrcodeContainer.innerHTML = '';
+    }
+    
+    // 检查QRCode库是否加载
+    if (typeof QRCode === 'undefined') {
+        console.error('QRCode库未加载');
+        qrcodeContainer.innerHTML = '<p style="color: #e74c3c;">二维码生成失败</p>';
+        return;
+    }
+    
+    try {
+        qrCodeInstance = new QRCode(qrcodeContainer, {
+            text: url,
+            width: 200,
+            height: 200,
+            colorDark: '#000000',
+            colorLight: '#ffffff',
+            correctLevel: QRCode.CorrectLevel.H
+        });
+    } catch (error) {
+        console.error('生成二维码失败:', error);
+        qrcodeContainer.innerHTML = '<p style="color: #e74c3c;">二维码生成失败</p>';
+    }
+}
+
+// 复制链接
+function copyShareLink() {
+    shareLinkInput.select();
+    shareLinkInput.setSelectionRange(0, 99999); // 移动端兼容
+    
+    try {
+        // 尝试使用现代API
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(shareLinkInput.value).then(() => {
+                showCopySuccess();
+            }).catch(err => {
+                // 降级到旧方法
+                fallbackCopy();
+            });
+        } else {
+            // 降级到旧方法
+            fallbackCopy();
+        }
+    } catch (err) {
+        console.error('复制失败:', err);
+        alert('复制失败,请手动复制链接');
+    }
+}
+
+// 降级复制方法
+function fallbackCopy() {
+    try {
+        const successful = document.execCommand('copy');
+        if (successful) {
+            showCopySuccess();
+        } else {
+            alert('复制失败,请手动复制链接');
+        }
+    } catch (err) {
+        console.error('降级复制也失败:', err);
+        alert('复制失败,请手动复制链接');
+    }
+}
+
+// 显示复制成功提示
+function showCopySuccess() {
+    const originalText = copyLinkBtn.textContent;
+    copyLinkBtn.textContent = '✓ 已复制';
+    copyLinkBtn.style.background = 'linear-gradient(135deg, #2ecc71, #27ae60)';
+    
+    setTimeout(() => {
+        copyLinkBtn.textContent = originalText;
+        copyLinkBtn.style.background = '';
+    }, 2000);
+    
+    // 播放成功音效
+    soundEffects.playStoryProgress();
+}
+
+// 解锁完整解析
+function unlockFullExplanation() {
+    const levelKey = `level${appState.currentLevel}`;
+    const wrongCount = appState.wrongAnswersCount[levelKey];
+    
+    if (wrongCount > 3) {
+        // 获取当前题目信息
+        const character = characters[appState.selectedCharacter];
+        const currentLevel = character.levels[appState.currentLevel - 1];
+        const currentQuestion = currentLevel.questions[appState.currentQuestionIndex];
+        
+        // 生成并显示完整解析
+        const detailedExplanation = generateDetailedExplanation(
+            currentQuestion.explanation,
+            currentQuestion.question
+        );
+        
+        const explanationElement = elements.feedback.querySelector('.detailed-explanation');
+        const lockedElement = elements.feedback.querySelector('.share-locked-explanation');
+        
+        if (explanationElement && lockedElement) {
+            explanationElement.innerHTML = detailedExplanation;
+            lockedElement.innerHTML = '<div class="unlocked-explanation"><p>🎉 恭喜!您已成功解锁完整解析!</p></div>';
+            lockedElement.classList.remove('share-locked-explanation');
+        }
+        
+        // 播放成功音效
+        soundEffects.playStoryProgress();
+    }
+    
+    // 关闭分享弹窗
+    closeShareModal();
+}
+
+// 绑定事件监听
+const unlockExplanationBtn = document.getElementById('unlock-explanation-btn');
+
+shareCloseBtn.addEventListener('click', closeShareModal);
+copyLinkBtn.addEventListener('click', copyShareLink);
+unlockExplanationBtn.addEventListener('click', unlockFullExplanation);
+
+// 点击弹窗背景关闭
+shareModal.addEventListener('click', (e) => {
+    if (e.target === shareModal) {
+        closeShareModal();
+    }
+});
+
+// ESC键关闭弹窗
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && shareModal.classList.contains('active')) {
+        closeShareModal();
+    }
+});

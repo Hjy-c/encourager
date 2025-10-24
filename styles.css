@@ -1707,3 +1707,207 @@ body::before {
     font-weight: 600;
     margin: 0;
 }
+
+/* 分享弹窗样式 */
+.share-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(8px);
+    z-index: 1000;
+    animation: fadeIn 0.3s ease-out;
+}
+
+.share-modal.active {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.share-content {
+    background: linear-gradient(135deg, rgba(23, 23, 23, 0.95), rgba(30, 30, 40, 0.95));
+    border-radius: 20px;
+    padding: 0;
+    max-width: 500px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    animation: slideUp 0.4s ease-out;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(50px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.share-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 25px 30px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    background: linear-gradient(135deg, rgba(108, 92, 231, 0.1), rgba(142, 68, 173, 0.1));
+}
+
+.share-title {
+    font-size: 1.5rem;
+    color: #ffffff;
+    margin: 0;
+    background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.share-close {
+    background: none;
+    border: none;
+    color: #ffffff;
+    font-size: 2rem;
+    cursor: pointer;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+}
+
+.share-close:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: rotate(90deg);
+}
+
+.share-body {
+    padding: 30px;
+}
+
+.share-section {
+    margin-bottom: 30px;
+}
+
+.share-section-title {
+    font-size: 1.2rem;
+    color: #ffffff;
+    margin-bottom: 15px;
+    text-align: center;
+}
+
+.qrcode-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    background: #ffffff;
+    border-radius: 12px;
+    margin: 0 auto 15px;
+    width: fit-content;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.share-tip {
+    text-align: center;
+    color: #b2bec3;
+    font-size: 0.9rem;
+    margin-top: 10px;
+}
+
+.share-divider {
+    text-align: center;
+    color: #b2bec3;
+    font-size: 1rem;
+    margin: 25px 0;
+    position: relative;
+}
+
+.share-divider::before,
+.share-divider::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 35%;
+    height: 1px;
+    background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.2), transparent);
+}
+
+.share-divider::before {
+    left: 0;
+}
+
+.share-divider::after {
+    right: 0;
+}
+
+.share-link-container {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.share-link-input {
+    flex: 1;
+    padding: 12px 15px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    color: #ffffff;
+    font-size: 0.9rem;
+    outline: none;
+    transition: all 0.3s ease;
+}
+
+.share-link-input:focus {
+    border-color: #6c5ce7;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.share-reward {
+    display: flex;
+    gap: 15px;
+    padding: 20px;
+    background: linear-gradient(135deg, rgba(255, 193, 7, 0.1), rgba(255, 152, 0, 0.1));
+    border-radius: 12px;
+    border: 1px solid rgba(255, 193, 7, 0.3);
+    margin-top: 20px;
+}
+
+.share-reward .reward-icon {
+    font-size: 2.5rem;
+    width: 50px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 193, 7, 0.2);
+    border-radius: 50%;
+}
+
+.share-reward .reward-text {
+    flex: 1;
+}
+
+.share-reward .reward-title {
+    font-size: 1.1rem;
+    color: #ffc107;
+    font-weight: 600;
+    margin-bottom: 5px;
+}
+
+.share-reward .reward-description {
+    color: #dfe6e9;
+    font-size: 0.9rem;
+    line-height: 1.4;
+}

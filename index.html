@@ -193,6 +193,44 @@
     </div>
 </div>
 
+<!-- 分享弹窗 -->
+<div id="share-modal" class="share-modal">
+    <div class="share-content">
+        <div class="share-header">
+            <h2 class="share-title">分享给好友解锁完整解析</h2>
+            <button class="share-close" id="share-close">×</button>
+        </div>
+        <div class="share-body">
+            <div class="share-section">
+                <h3 class="share-section-title">📱 方式一：扫码分享</h3>
+                <div id="qrcode-container" class="qrcode-container"></div>
+                <p class="share-tip">长按二维码保存,分享到微信</p>
+            </div>
+            <div class="share-divider">或</div>
+            <div class="share-section">
+                <h3 class="share-section-title">🔗 方式二：复制链接</h3>
+                <div class="share-link-container">
+                    <input type="text" id="share-link-input" class="share-link-input" readonly>
+                    <button id="copy-link-btn" class="btn btn-primary">复制链接</button>
+                </div>
+                <p class="share-tip">复制链接后,打开微信发送给好友</p>
+            </div>
+            <div class="share-reward">
+                <div class="reward-icon">🎁</div>
+                <div class="reward-text">
+                    <div class="reward-title">邀请奖励</div>
+                    <div class="reward-description">每成功邀请3位好友,解锁高级解析库</div>
+                </div>
+            </div>
+            
+            <button class="btn btn-primary" id="unlock-explanation-btn" style="width: 100%; margin-top: 20px;">
+                🎉 完成分享,解锁完整解析
+            </button>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 <script src="particles.js"></script>
 <script src="app.js"></script>
 </body>
