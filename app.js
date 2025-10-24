@@ -1373,7 +1373,7 @@ const soundEffects = {
         console.log('播放成功音效');
     },
 
-    // 播放反馈语音 - 使用Web Audio API修复版
+    // 播放反馈语音 - 使用Web Audio API修复版 + 语音播报
     playFeedbackVoice(style) {
         console.log(`尝试播放${style}风格的语音反馈（Web Audio API修复版）`);
 
@@ -1403,8 +1403,203 @@ const soundEffects = {
             // 播放反馈声音
             this._playSimpleSound(frequency, 0.5);
             console.log(`成功播放${style}风格的语音反馈（Web Audio API修复版）`);
+            
+            // 添加语音播报鼓励语
+            this._speakEncouragement(style);
         } catch (error) {
             console.error('播放语音过程中发生异常:', error);
+        }
+    },
+    
+    // 播放答错反馈
+    playWrongFeedback() {
+        try {
+            // 播放错误音效（较低频率）
+            this._playSimpleSound(200, 0.3);
+            console.log('播放答错音效');
+            
+            // 使用语音播报统一文案
+            this._speakWrongMessage();
+        } catch (error) {
+            console.error('播放答错语音过程中发生异常:', error);
+        }
+    },
+    
+    // 使用Web Speech API播报答错提示
+    _speakWrongMessage() {
+        // 检查浏览器是否支持语音合成
+        if (!('speechSynthesis' in window)) {
+            console.warn('浏览器不支持语音合成功能');
+            return;
+        }
+        
+        try {
+            // 统一的答错文案(四川方言)
+            const message = '呕吼~死翘翘咯';
+            
+            // 创建语音合成实例
+            const utterance = new SpeechSynthesisUtterance(message);
+            
+            // 设置语音参数（使用较温和的参数）
+            utterance.lang = 'zh-CN';
+            utterance.rate = 1.0;  // 正常语速
+            utterance.pitch = 1.1; // 略高音调
+            utterance.volume = 0.9; // 略低音量
+            
+            // 尝试选择合适的语音
+            const voices = window.speechSynthesis.getVoices();
+            const preferredVoice = voices.find(voice => 
+                voice.lang.includes('zh') && 
+                (voice.name.includes('Xiaoyi') || voice.name.includes('Xiaoxiao'))
+            );
+            
+            if (preferredVoice) {
+                utterance.voice = preferredVoice;
+                console.log(`选择语音: ${preferredVoice.name}`);
+            }
+            
+            // 播放语音
+            window.speechSynthesis.speak(utterance);
+            console.log('播放答错语音提示: ' + message);
+        } catch (error) {
+            console.error('语音播报答错提示失败:', error);
+        }
+    },
+    
+    // 使用Web Speech API播报鼓励语
+    _speakEncouragement(style) {
+        // 检查浏览器是否支持语音合成
+        if (!('speechSynthesis' in window)) {
+            console.warn('浏览器不支持语音合成功能');
+            return;
+        }
+        
+        // 根据风格选择不同的鼓励语
+        const encouragements = {
+            '总裁': [
+                '很好，思路清晰，逻辑严密。',
+                '不错，这个问题处理得很到位。',
+                '非常好，你已经掌握了其中的精髓。'
+            ],
+            '二次元': [
+                '哇塞，你超厉害的耶！',
+                '太棒啦，你一定是学霸吧！',
+                '好厉害，这个解法太神了！'
+            ],
+            '萌妹': [
+                '哇，你好棒哦！',
+                '太厉害了啦，好崇拜你哦！',
+                '哇塞，完全正确呢！'
+            ],
+            '学者': [
+                '很好，你的解答展现了清晰的逻辑思维。',
+                '正确，你已经掌握了这个规律。',
+                '非常精彩，你已经触及到了问题的本质。'
+            ],
+            '武侠': [
+                '好！这一招使得妙！',
+                '不错！解法干脆利落！',
+                '妙哉！此等解题思路精妙绝伦！'
+            ],
+            'default': [
+                '回答正确！你真棒！',
+                '太好了！继续加油！',
+                '答对了！你很聪明！'
+            ]
+        };
+        
+        // 获取对应风格的鼓励语数组，如果没有则使用默认
+        const messages = encouragements[style] || encouragements['default'];
+        const message = messages[Math.floor(Math.random() * messages.length)];
+        
+        try {
+            // 创建语音合成实例
+            const utterance = new SpeechSynthesisUtterance(message);
+            
+            // 获取可用的语音列表
+            const voices = window.speechSynthesis.getVoices();
+            
+            // 根据不同风格设置不同的语音参数和选择合适的音色
+            utterance.lang = 'zh-CN'; // 中文
+            
+            // 优先选择质量更好的中文语音
+            let selectedVoice = null;
+            
+            // 根据风格选择合适的音色（优先女声或男声）
+            switch(style) {
+                case '总裁':
+                    // 选择男声，优先 Microsoft Yunyang 或其他男声
+                    selectedVoice = voices.find(v => 
+                        v.lang.includes('zh') && 
+                        (v.name.includes('Yunyang') || v.name.includes('Male') || v.name.includes('男'))
+                    );
+                    utterance.rate = 0.85; // 更慢更稳重的语速
+                    utterance.pitch = 0.80; // 更低沉有力的音调
+                    utterance.volume = 0.95; // 略微降低音量增加沉稳感
+                    break;
+                case '二次元':
+                    // 选择女声，优先 Microsoft Xiaoxiao 或其他活泼女声
+                    selectedVoice = voices.find(v => 
+                        v.lang.includes('zh') && 
+                        (v.name.includes('Xiaoxiao') || v.name.includes('Female') || v.name.includes('女'))
+                    );
+                    utterance.rate = 1.28; // 更快更活泼的语速
+                    utterance.pitch = 1.60; // 更高更可爱的音调
+                    utterance.volume = 1.0; // 保持饱满音量
+                    break;
+                case '萌妹':
+                    // 选择女声，优先 Microsoft Xiaoyi 或甜美女声
+                    selectedVoice = voices.find(v => 
+                        v.lang.includes('zh') && 
+                        (v.name.includes('Xiaoyi') || v.name.includes('Xiaoxiao') || v.name.includes('Female') || v.name.includes('女'))
+                    );
+                    utterance.rate = 1.08; // 略快增加活泼感
+                    utterance.pitch = 1.70; // 非常高的音调突出甜美
+                    utterance.volume = 0.90; // 降低音量增加柔和感
+                    break;
+                case '学者':
+                    // 选择标准男声或女声
+                    selectedVoice = voices.find(v => 
+                        v.lang.includes('zh') && 
+                        (v.name.includes('Yunxi') || v.name.includes('Zhiyu'))
+                    );
+                    utterance.rate = 0.80; // 更慢更沉稳的语速
+                    utterance.pitch = 0.92; // 略低增加权威感
+                    utterance.volume = 0.88; // 降低音量增加温和感
+                    break;
+                case '武侠':
+                    // 选择男声，显得豪迈
+                    selectedVoice = voices.find(v => 
+                        v.lang.includes('zh') && 
+                        (v.name.includes('Yunyang') || v.name.includes('Male') || v.name.includes('男'))
+                    );
+                    utterance.rate = 1.15; // 更快更有力的语速
+                    utterance.pitch = 0.85; // 更低增加豪迈感
+                    utterance.volume = 1.0; // 保持饱满音量
+                    break;
+                default:
+                    selectedVoice = voices.find(v => v.lang.includes('zh'));
+                    utterance.rate = 1.0;
+                    utterance.pitch = 1.2;
+                    utterance.volume = 1.0;
+            }
+            
+            // 如果没有找到特定音色，使用任何可用的中文语音
+            if (!selectedVoice) {
+                selectedVoice = voices.find(v => v.lang.includes('zh') || v.lang.includes('CN'));
+            }
+            
+            // 设置选中的音色
+            if (selectedVoice) {
+                utterance.voice = selectedVoice;
+                console.log(`使用语音: ${selectedVoice.name}`);
+            }
+            
+            // 播放语音
+            window.speechSynthesis.speak(utterance);
+            console.log(`语音播报[${style}风格]: ${message} (语速:${utterance.rate}, 音调:${utterance.pitch})`);
+        } catch (error) {
+            console.error('语音播报失败:', error);
         }
     },
 
@@ -1504,6 +1699,16 @@ const characterTotalLevels = {
 
 // 初始化应用
 function initApp() {
+    // 预加载语音列表（用于语音播报功能）
+    if ('speechSynthesis' in window) {
+        // 触发语音列表加载
+        window.speechSynthesis.getVoices();
+        // 监听语音列表变化事件
+        window.speechSynthesis.onvoiceschanged = () => {
+            console.log('语音列表已加载，可用语音数量:', window.speechSynthesis.getVoices().length);
+        };
+    }
+
     // 加载本地存储的数据
     loadFromLocalStorage();
 
@@ -1968,6 +2173,9 @@ function showFeedback(isCorrect, explanation) {
             `;
         }
     } else {
+        // 播放答错语音提示
+        soundEffects.playWrongFeedback();
+        
         // 增加当前关卡的错题计数（记录不同的题目）
         const levelKey = `level${appState.currentLevel}`;
         // 初始化答错题目集合
