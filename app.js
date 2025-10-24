@@ -1846,8 +1846,8 @@ function showFeedback(isCorrect, explanation) {
         const levelKey = `level${appState.currentLevel}`;
         appState.levelAttempts[levelKey] = (appState.levelAttempts[levelKey] || 0) + 1;
 
-        // 检查是否需要显示购买引导
-        if (appState.levelAttempts[levelKey] >= 3) {
+        // 检查是否需要显示购买引导（恰好答错3次时才触发）
+        if (appState.levelAttempts[levelKey] === 3) {
             // 显示购买引导弹窗
             setTimeout(() => {
                 showPurchasePrompt();
@@ -1900,6 +1900,8 @@ function nextQuestion() {
 
     // 如果有错题需要重练，继续留在当前关卡
     if (appState.retryQuestions.length > 0) {
+        // 移除当前已作答的错题，准备显示下一道错题
+        appState.retryQuestions.shift();
         updateBattleUI();
         return;
     }
@@ -2055,41 +2057,13 @@ function showPurchasePrompt() {
     qrContainer.style.borderRadius = '8px';
     qrContainer.style.background = 'white';
 
-    // 创建二维码图片（使用占位符SVG）
-    const qrCode = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    qrCode.setAttribute('width', '180');
-    qrCode.setAttribute('height', '180');
-    qrCode.setAttribute('viewBox', '0 0 180 180');
-
-    // 生成简单的二维码图案（实际应用中应替换为真实二维码）
-    let qrPattern = '';
-    const modules = 25;
-    const size = 180 / modules;
-
-    // 模拟二维码图案生成
-    for (let i = 0; i < modules; i++) {
-        for (let j = 0; j < modules; j++) {
-            // 创建三个角的定位图案
-            const isTopLeftCorner = (i < 7 && j < 7) && !(i > 1 && i < 5 && j > 1 && j < 5);
-            const isTopRightCorner = (i < 7 && j > modules - 8) && !(i > 1 && i < 5 && j > modules - 6 && j < modules - 2);
-            const isBottomLeftCorner = (i > modules - 8 && j < 7) && !(i > modules - 6 && i < modules - 2 && j > 1 && j < 5);
-
-            // 其他模块随机生成
-            const isRandomModule = Math.random() > 0.6;
-
-            if (isTopLeftCorner || isTopRightCorner || isBottomLeftCorner || isRandomModule) {
-                qrPattern += `<rect x="${i * size}" y="${j * size}" width="${size}" height="${size}" fill="black" />`;
-            }
-        }
-    }
-
-    // 在中心添加一个小图标占位符
-    qrPattern += `
-        <circle cx="90" cy="90" r="20" fill="white" stroke="black" stroke-width="2" />
-        <text x="90" y="95" text-anchor="middle" font-size="12" fill="black">企微</text>
-    `;
-
-    qrCode.innerHTML = qrPattern;
+    // 创建二维码图片
+    const qrCode = document.createElement('img');
+    qrCode.src = 'https://res.gaodunwangxiao.com/tools/2025-10-24/73977960_79c93868-0160-4827-b2f0-5f679e51c73c.jpg';
+    qrCode.alt = '企业微信二维码';
+    qrCode.style.width = '180px';
+    qrCode.style.height = '180px';
+    qrCode.style.objectFit = 'contain';
     qrContainer.appendChild(qrCode);
     modalContent.appendChild(qrContainer);
 
@@ -2288,61 +2262,21 @@ function typewriterEffect(element, text, callback) {
     let index = 0;
     const speed = 30; // 每个字符的延迟时间（毫秒）
 
-    // 提取文本中的角色名称和关键术语
-    const characterName = characters[appState.selectedCharacter]?.name || '';
-
-    // 定义关键术语列表（可以根据不同角色动态生成）
-    const techTerms = getTechTermsByCharacter(appState.selectedCharacter);
-
     function typeNextChar() {
         if (index < text.length) {
             let currentChar = text.charAt(index);
-            let nextChars = text.substring(index);
             let charElement = document.createElement('span');
-            charElement.className = 'typewriter-char';
-            charElement.style.animationDelay = `${index * 0.02}s`;
+            
+            // 确保所有字符都能正确显示
+            charElement.textContent = currentChar;
+            charElement.style.display = 'inline';
+            charElement.style.whiteSpace = 'pre-wrap';
+            
+            element.appendChild(charElement);
+            index++;
 
-            let termFound = false;
-
-            // 检查是否是角色名称的开始
-            if (nextChars.startsWith(characterName)) {
-                // 创建角色名称的span元素
-                const nameElement = document.createElement('span');
-                nameElement.className = 'typewriter-char role-name';
-                nameElement.style.animationDelay = `${index * 0.02}s`;
-                nameElement.textContent = characterName;
-                element.appendChild(nameElement);
-                index += characterName.length;
-                termFound = true;
-            }
-            // 检查是否是关键术语的开始 - 修复可能导致字符缺失的问题
-            else {
-                // 检查是否存在任何关键术语
-                const matchingTerm = techTerms.find(term => nextChars.startsWith(term));
-                if (matchingTerm) {
-                    // 创建关键术语的span元素
-                    const termElement = document.createElement('span');
-                    termElement.className = 'typewriter-char tech-term';
-                    termElement.style.animationDelay = `${index * 0.02}s`;
-                    termElement.textContent = matchingTerm;
-                    element.appendChild(termElement);
-                    index += matchingTerm.length;
-                    termFound = true;
-                }
-            }
-
-            // 普通字符
-            if (!termFound) {
-                // 确保所有字符（包括空格）都能正确处理
-                charElement.textContent = currentChar === ' ' ? '\u00A0' : currentChar;
-                element.appendChild(charElement);
-                index++;
-            }
-
-            // 使用requestAnimationFrame确保流畅的动画
-            requestAnimationFrame(() => {
-                setTimeout(typeNextChar, speed);
-            });
+            // 使用setTimeout实现流畅的逐字输出
+            setTimeout(typeNextChar, speed);
         } else {
             // 文本输出完成后调用回调函数
             if (typeof callback === 'function') {
@@ -2507,9 +2441,16 @@ function updateBattleUI() {
     }
 
     // 更新进度指示器
-    const totalQuestionsInLevel = appState.retryQuestions.length > 0 ? appState.retryQuestions.length : currentLevel.questions.length;
-    elements.currentQuestion.textContent = appState.currentQuestionIndex + 1;
-    elements.totalQuestions.textContent = totalQuestionsInLevel;
+    if (appState.retryQuestions.length > 0) {
+        // 错题模式：显示当前在重练第几道错题
+        const totalRetryQuestions = appState.retryQuestions.length;
+        elements.currentQuestion.textContent = `错题重练 1`;
+        elements.totalQuestions.textContent = totalRetryQuestions;
+    } else {
+        // 正常模式：按照关卡总题数和当前题目索引显示
+        elements.currentQuestion.textContent = appState.currentQuestionIndex + 1;
+        elements.totalQuestions.textContent = currentLevel.questions.length;
+    }
 
     // 更新题目内容
     const questionContentElement = elements.questionContainer.querySelector('.question-content');
