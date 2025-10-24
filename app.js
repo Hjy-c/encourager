@@ -2000,6 +2000,41 @@ function nextStory() {
     if (!appState.selectedCharacter) return;
 
     const character = characters[appState.selectedCharacter];
+    
+    // 如果流式输出正在进行，先停止并完整显示当前文本
+    if (isTypewriterActive) {
+        // 停止当前的打字效果
+        isTypewriterActive = false;
+        if (currentTypewriterTimer) {
+            clearTimeout(currentTypewriterTimer);
+            currentTypewriterTimer = null;
+        }
+        
+        // 获取当前故事段落的完整文本并立即显示
+        const currentStorySection = character.story[appState.currentStoryIndex];
+        if (currentStorySection) {
+            // 处理故事文本，将角色名字包裹在带有特殊类名的span标签中
+            let processedText = currentStorySection.text;
+            const characterNames = ['Cyber侦探', '星球开拓者', '非遗守护人', '数学探索家'];
+            
+            characterNames.forEach(name => {
+                const regex = new RegExp(name, 'g');
+                processedText = processedText.replace(regex, `<span class="character-name-highlight">${name}</span>`);
+            });
+            
+            // 立即显示完整文本
+            elements.storyNarration.innerHTML = processedText;
+            
+            // 显示继续按钮
+            if (currentStorySection.next) {
+                elements.nextStoryBtn.classList.remove('hidden');
+            }
+        }
+        
+        // 不继续执行，等待用户再次点击
+        return;
+    }
+    
     appState.currentStoryIndex++;
 
     // 播放故事进度音效
@@ -2714,28 +2749,8 @@ function showFeedback(isCorrect, explanation) {
         const shareButton = elements.feedback.querySelector('.share-button');
         if (shareButton) {
             shareButton.addEventListener('click', () => {
-                // 这里可以实现实际的分享逻辑
-                // 由于是模拟环境，我们只显示一个提示信息
-                alert('分享功能已触发！在实际环境中，这里会调用分享API或显示分享弹窗。');
-
-                // 为了演示目的，点击后可以解锁当前解析
-                // 在实际应用中，这里应该等待用户完成分享操作后再解锁
-                const levelKey = `level${appState.currentLevel}`;
-                const wrongCount = appState.wrongAnswersCount[levelKey];
-
-                if (wrongCount > 3) {
-                    // 生成并显示完整解析
-                    const detailedExplanation = generateDetailedExplanation(explanation, question);
-                    const explanationElement = elements.feedback.querySelector('.detailed-explanation');
-                    const lockedElement = elements.feedback.querySelector('.share-locked-explanation');
-
-                    if (explanationElement && lockedElement) {
-                        explanationElement.innerHTML = detailedExplanation;
-                        lockedElement.innerHTML = '<p>🎉 恭喜！您已成功解锁完整解析！</p>';
-                        lockedElement.classList.remove('share-locked-explanation');
-                        lockedElement.classList.add('unlocked-explanation');
-                    }
-                }
+                // 打开分享弹窗
+                openShareModal(explanation, question);
             });
         }
     }
@@ -3109,33 +3124,88 @@ function updateUI() {
     }
 }
 
+// 全局变量用于存储当前的打字效果定时器
+let currentTypewriterTimer = null;
+let isTypewriterActive = false;
+
 // 流式文字输出效果
 function typewriterEffect(element, text, callback) {
     if (!element || !text) return;
 
+    // 取消之前的打字效果
+    if (currentTypewriterTimer) {
+        clearTimeout(currentTypewriterTimer);
+        currentTypewriterTimer = null;
+    }
+    isTypewriterActive = true;
+
     // 清空元素内容
     element.innerHTML = '';
 
+    // 创建临时元素来解析HTML
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = text;
+    
+    // 获取所有文本节点和元素节点
+    const nodes = [];
+    function collectNodes(node) {
+        if (node.nodeType === Node.TEXT_NODE) {
+            // 文本节点，按字符拆分
+            const chars = node.textContent.split('');
+            chars.forEach(char => {
+                nodes.push({ type: 'text', content: char });
+            });
+        } else if (node.nodeType === Node.ELEMENT_NODE) {
+            // 元素节点，记录开始标签
+            nodes.push({ type: 'elementStart', element: node.cloneNode(false) });
+            // 递归处理子节点
+            node.childNodes.forEach(child => collectNodes(child));
+            // 记录结束标签
+            nodes.push({ type: 'elementEnd' });
+        }
+    }
+    
+    tempDiv.childNodes.forEach(node => collectNodes(node));
+    
     let index = 0;
     const speed = 30; // 每个字符的延迟时间（毫秒）
+    const elementStack = [element]; // 元素栈，用于跟踪当前应该添加到哪个元素
 
-    function typeNextChar() {
-        if (index < text.length) {
-            let currentChar = text.charAt(index);
-            let charElement = document.createElement('span');
+    function typeNextNode() {
+        // 检查是否应该停止
+        if (!isTypewriterActive) {
+            return;
+        }
 
-            // 确保所有字符都能正确显示
-            charElement.textContent = currentChar;
-            charElement.style.display = 'inline';
-            charElement.style.whiteSpace = 'pre-wrap';
-
-            element.appendChild(charElement);
+        if (index < nodes.length) {
+            const node = nodes[index];
+            const currentParent = elementStack[elementStack.length - 1];
+            
+            if (node.type === 'text') {
+                // 添加文本字符
+                const charElement = document.createElement('span');
+                charElement.textContent = node.content;
+                charElement.style.display = 'inline';
+                charElement.style.whiteSpace = 'pre-wrap';
+                currentParent.appendChild(charElement);
+            } else if (node.type === 'elementStart') {
+                // 创建并添加元素
+                const newElement = node.element.cloneNode(false);
+                currentParent.appendChild(newElement);
+                elementStack.push(newElement);
+            } else if (node.type === 'elementEnd') {
+                // 弹出元素栈
+                elementStack.pop();
+            }
+            
             index++;
-
-            // 使用setTimeout实现流畅的逐字输出
-            setTimeout(typeNextChar, speed);
+            currentTypewriterTimer = setTimeout(typeNextNode, speed);
         } else {
-            // 文本输出完成后调用回调函数
+            // 文本输出完成
+            isTypewriterActive = false;
+            currentTypewriterTimer = null;
+            
+            // 调用回调函数
             if (typeof callback === 'function') {
                 callback();
             }
@@ -3143,7 +3213,7 @@ function typewriterEffect(element, text, callback) {
     }
 
     // 开始打字效果
-    typeNextChar();
+    typeNextNode();
 }
 
 // 根据角色获取关键术语
@@ -3177,8 +3247,17 @@ function updateStoryUI() {
     const storyTitle = titleMap[appState.selectedCharacter] || `开启${character.name}的精彩旅程`;
     elements.storyTitle.textContent = storyTitle;
 
+    // 处理故事文本，将角色名字包裹在带有特殊类名的span标签中
+    let processedText = storySection.text;
+    const characterNames = ['Cyber侦探', '星球开拓者', '非遗守护人', '数学探索家'];
+    
+    characterNames.forEach(name => {
+        const regex = new RegExp(name, 'g');
+        processedText = processedText.replace(regex, `<span class="character-name-highlight">${name}</span>`);
+    });
+
     // 使用流式文字输出效果更新故事内容
-    typewriterEffect(elements.storyNarration, storySection.text, () => {
+    typewriterEffect(elements.storyNarration, processedText, () => {
         // 文本输出完成后执行的操作
         // 例如显示选择项或继续按钮
         // 清除之前的选择项
@@ -3389,5 +3468,180 @@ function saveAchievementToLocalStorage(achievementName) {
     }
 }
 
+// 分享弹窗相关变量
+let currentShareExplanation = '';
+let currentShareQuestion = null;
+
+// 打开分享弹窗
+function openShareModal(explanation, question) {
+    currentShareExplanation = explanation;
+    currentShareQuestion = question;
+    
+    const shareModal = document.getElementById('share-modal');
+    const shareLinkInput = document.getElementById('share-link-input');
+    const copyButton = document.getElementById('copy-link-btn');
+    
+    // 生成分享链接
+    const shareUrl = 'https://tonight-release.gaodun.com/';
+    shareLinkInput.value = shareUrl;
+    
+    // 重置按钮状态
+    copyButton.textContent = '复制链接';
+    copyButton.style.background = '';
+    
+    // 显示弹窗
+    shareModal.style.display = 'flex';
+}
+
+
+
+// 关闭分享弹窗
+function closeShareModal() {
+    const shareModal = document.getElementById('share-modal');
+    const copyButton = document.getElementById('copy-link-btn');
+    
+    // 重置按钮状态
+    copyButton.textContent = '复制链接';
+    copyButton.style.background = '';
+    
+    shareModal.style.display = 'none';
+}
+
+// 检测是否为移动设备
+function isMobileDevice() {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+}
+
+// 复制链接
+function copyShareLink() {
+    const shareLinkInput = document.getElementById('share-link-input');
+    const copyButton = document.getElementById('copy-link-btn');
+    const shareUrl = shareLinkInput.value;
+    
+    shareLinkInput.select();
+    shareLinkInput.setSelectionRange(0, 99999);
+    
+    const copySuccess = () => {
+        // 修改按钮状态
+        copyButton.textContent = '已复制';
+        copyButton.style.background = 'linear-gradient(135deg, #27ae60, #2ecc71)';
+        
+        // 如果是移动设备，尝试调用分享功能
+        if (isMobileDevice()) {
+            // 检查是否在微信内置浏览器中
+            const isWeChat = /MicroMessenger/i.test(navigator.userAgent);
+            
+            if (isWeChat) {
+                // 在微信中，显示引导提示
+                setTimeout(() => {
+                    alert('链接已复制！\n请点击右上角菜单分享给朋友');
+                }, 300);
+            } else {
+                // 不在微信中，尝试使用Web Share API或引导用户打开微信
+                if (navigator.share) {
+                    // 支持Web Share API
+                    navigator.share({
+                        title: '分享链接',
+                        text: '来看看这个有趣的内容！',
+                        url: shareUrl
+                    }).catch(() => {
+                        // 用户取消分享或分享失败，显示引导
+                        setTimeout(() => {
+                            alert('链接已复制！\n请打开微信粘贴分享给好友');
+                        }, 300);
+                    });
+                } else {
+                    // 不支持Web Share API，尝试跳转微信
+                    setTimeout(() => {
+                        // 尝试通过scheme打开微信
+                        const wechatScheme = 'weixin://';
+                        window.location.href = wechatScheme;
+                        
+                        // 如果2秒后还在当前页面，说明没有安装微信或无法打开
+                        setTimeout(() => {
+                            alert('链接已复制！\n请打开微信粘贴分享给好友');
+                        }, 2000);
+                    }, 300);
+                }
+            }
+        }
+    };
+    
+    try {
+        document.execCommand('copy');
+        copySuccess();
+    } catch (err) {
+        // 如果execCommand不支持，尝试使用现代API
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(shareUrl).then(() => {
+                copySuccess();
+            }).catch(() => {
+                alert('复制失败，请手动复制链接');
+            });
+        } else {
+            alert('复制失败，请手动复制链接');
+        }
+    }
+}
+
+// 解锁完整解析
+function unlockExplanation() {
+    if (!currentShareExplanation || !currentShareQuestion) {
+        closeShareModal();
+        return;
+    }
+    
+    const levelKey = `level${appState.currentLevel}`;
+    const wrongCount = appState.wrongAnswersCount[levelKey];
+    
+    if (wrongCount > 3) {
+        // 生成并显示完整解析
+        const detailedExplanation = generateDetailedExplanation(currentShareExplanation, currentShareQuestion);
+        const explanationElement = elements.feedback.querySelector('.detailed-explanation');
+        const lockedElement = elements.feedback.querySelector('.share-locked-explanation');
+        
+        if (explanationElement && lockedElement) {
+            explanationElement.innerHTML = detailedExplanation;
+            lockedElement.innerHTML = '<p>🎉 恭喜！您已成功解锁完整解析！</p>';
+            lockedElement.classList.remove('share-locked-explanation');
+            lockedElement.classList.add('unlocked-explanation');
+        }
+    }
+    
+    closeShareModal();
+}
+
+// 绑定分享弹窗事件
+function bindShareModalEvents() {
+    const shareClose = document.getElementById('share-close');
+    const copyLinkBtn = document.getElementById('copy-link-btn');
+    const unlockBtn = document.getElementById('unlock-explanation-btn');
+    const shareModal = document.getElementById('share-modal');
+    
+    if (shareClose) {
+        shareClose.addEventListener('click', closeShareModal);
+    }
+    
+    if (copyLinkBtn) {
+        copyLinkBtn.addEventListener('click', copyShareLink);
+    }
+    
+    if (unlockBtn) {
+        unlockBtn.addEventListener('click', unlockExplanation);
+    }
+    
+    // 点击弹窗背景关闭
+    if (shareModal) {
+        shareModal.addEventListener('click', (e) => {
+            if (e.target === shareModal) {
+                closeShareModal();
+            }
+        });
+    }
+}
+
 // 初始化应用
 initApp();
+
+// 绑定分享弹窗事件
+bindShareModalEvents();

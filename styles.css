@@ -399,6 +399,25 @@ body {
     color: #ffffff; /* 确保文本在深色背景上清晰可见 */
 }
 
+/* 角色名字高亮样式 */
+.character-name-highlight {
+    background: linear-gradient(135deg, #6c5ce7, #8e44ad, #00b894, #4dabf7);
+    background-size: 300% 300%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: characterNameGradient 3s ease infinite;
+    font-weight: 600;
+    position: relative;
+    display: inline-block;
+}
+
+@keyframes characterNameGradient {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
 @keyframes textReveal {
     from {
         opacity: 0;
@@ -749,7 +768,7 @@ body {
 .feedback-wrong {
     padding: 10px;
     border-radius: 6px;
-    background-color: rgba(255, 0, 0, 0.1);
+    background-color: transparent;
 }
 
 /* 通用隐藏类 */
@@ -1394,11 +1413,11 @@ body::before {
 
 /* 详细解析样式 */
 .detailed-explanation {
-    background: rgba(23, 23, 23, 0.8);
+    background: transparent;
     border-radius: 12px;
     padding: 20px;
     margin-top: 15px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    box-shadow: none;
     border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
@@ -1470,7 +1489,7 @@ body::before {
 
 /* 分享锁定解析区域样式 */
 .share-locked-explanation {
-    background: linear-gradient(135deg, rgba(108, 99, 255, 0.1), rgba(142, 68, 173, 0.1));
+    background: transparent;
     border-radius: 12px;
     padding: 20px;
     margin-top: 15px;
@@ -1720,10 +1739,6 @@ body::before {
     backdrop-filter: blur(8px);
     z-index: 1000;
     animation: fadeIn 0.3s ease-out;
-}
-
-.share-modal.active {
-    display: flex;
     justify-content: center;
     align-items: center;
 }
@@ -1732,10 +1747,9 @@ body::before {
     background: linear-gradient(135deg, rgba(23, 23, 23, 0.95), rgba(30, 30, 40, 0.95));
     border-radius: 20px;
     padding: 0;
-    max-width: 500px;
-    width: 90%;
-    max-height: 90vh;
-    overflow-y: auto;
+    width: auto;
+    min-width: 400px;
+    max-width: 90%;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
     border: 1px solid rgba(255, 255, 255, 0.1);
     animation: slideUp 0.4s ease-out;
@@ -1915,4 +1929,25 @@ body::before {
     color: #dfe6e9;
     font-size: 0.9rem;
     line-height: 1.4;
+}
+
+/* 分享弹窗响应式样式 */
+@media (max-width: 768px) {
+    .share-content {
+        min-width: 300px;
+        width: 90%;
+    }
+    
+    .share-body {
+        padding: 20px;
+    }
+    
+    .share-reward {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .share-reward .reward-icon {
+        margin: 0 auto 10px;
+    }
 }
