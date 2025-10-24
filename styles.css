@@ -731,7 +731,7 @@ body {
     margin-bottom: 10px;
     padding: 10px;
     border-radius: 6px;
-    background-color: rgba(255, 255, 255, 0.05);
+    background-color: transparent;
 }
 
 /* 不同人物风格的颜色区分 */

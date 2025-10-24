@@ -2784,86 +2784,27 @@ function nextQuestion() {
         // 重置关卡尝试次数
         appState.levelAttempts[levelKey] = 0;
 
-        // 显示关卡完成成就（如果有的话）
-        const levelAchievement = character.achievements[levelKey];
-        if (levelAchievement) {
-            showAchievement(levelAchievement);
-            return; // 如果显示了成就弹窗，就不再继续下面的逻辑
-        }
-
         // 记录关卡完成情况
         appState.analytics.levelCompletions[appState.selectedCharacter] = appState.currentLevel;
         saveToLocalStorage();
 
+        // 显示关卡完成成就（如果有的话）
+        const levelAchievement = character.achievements[levelKey];
+        if (levelAchievement) {
+            showAchievement(levelAchievement);
+            return; // 显示成就弹窗后返回
+        }
+
         // 检查是否还有下一关
         const nextLevelIndex = appState.currentLevel;
         if (nextLevelIndex < character.levels.length) {
-            // 准备下一关信息
-            const nextLevel = character.levels[nextLevelIndex];
-
-            // 显示当前关卡成功信息和下一关卡引导提示
-            elements.feedback.innerHTML = `
-                <div>${currentLevel.successMessage}</div>
-                <div style="margin-top: 15px; font-size: 1.1em;">下一关: ${nextLevel.title}</div>
-                <div style="margin-top: 5px; color: var(--accent-color-3);">${nextLevel.description}</div>
-            `;
-            elements.feedback.style.display = 'block';
-            elements.feedback.style.textAlign = 'center';
-            elements.feedback.style.padding = '20px';
-            elements.feedback.style.backgroundColor = 'rgba(255, 255, 255, 0.95)';
-            elements.feedback.style.borderRadius = '10px';
-            elements.feedback.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
-
-            // 检查继续按钮是否存在，防止未定义错误
-            if (elements.continueBtn) {
-                // 显示继续按钮
-                elements.continueBtn.textContent = '继续闯关';
-                elements.continueBtn.classList.remove('hidden');
-
-                // 为继续按钮添加点击事件
-                elements.continueBtn.onclick = () => {
-                    // 进入下一关
-                    appState.currentLevel++;
-                    appState.currentQuestionIndex = 0;
-                    appState.completedQuestionsCount = 0; // 重置已完成题目计数
-                    appState.generatedDerivativeCount = 0; // 重置衍生题计数
-
-                    // 隐藏反馈和继续按钮
-                    elements.feedback.style.display = 'none';
-                    elements.continueBtn.classList.add('hidden');
-
-                    // 更新UI，进入下一关的刷题界面
-                    updateBattleUI();
-                };
-            } else {
-                // 如果继续按钮不存在，使用nextQuestionBtn作为替代
-                if (elements.nextQuestionBtn) {
-                    elements.nextQuestionBtn.textContent = '继续闯关';
-                    elements.nextQuestionBtn.classList.remove('hidden');
-
-                    // 临时存储原始点击事件处理程序
-                    const originalNextQuestionHandler = elements.nextQuestionBtn.onclick;
-
-                    // 设置临时点击事件处理程序
-                    elements.nextQuestionBtn.onclick = () => {
-                        // 进入下一关
-                        appState.currentLevel++;
-                        appState.currentQuestionIndex = 0;
-                        appState.completedQuestionsCount = 0; // 重置已完成题目计数
-                        appState.generatedDerivativeCount = 0; // 重置衍生题计数
-
-                        // 隐藏反馈
-                        elements.feedback.style.display = 'none';
-
-                        // 恢复原始点击事件处理程序
-                        elements.nextQuestionBtn.textContent = '下一题';
-                        elements.nextQuestionBtn.onclick = originalNextQuestionHandler;
-
-                        // 更新UI，进入下一关的刷题界面
-                        updateBattleUI();
-                    };
-                }
-            }
+            // 如果还有下一关，也显示成就弹窗（使用当前关卡的成就或创建临时成就）
+            const tempAchievement = {
+                name: `完成${currentLevel.title}`,
+                description: currentLevel.successMessage,
+                icon: '🎉'
+            };
+            showAchievement(tempAchievement);
         } else {
             // 完成所有关卡，显示最终成就
             setTimeout(() => {
