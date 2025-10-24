@@ -2997,10 +2997,9 @@ function openShareModal() {
             }, 1000);
             return;
         } else {
-            // 非微信移动端浏览器，尝试唤起微信分享
-            try {
-                // 尝试使用Web Share API（现代移动浏览器支持）
-                if (navigator.share) {
+            // 非微信移动端浏览器，尝试使用Web Share API
+            if (navigator.share) {
+                try {
                     navigator.share({
                         title: '逻辑推理游戏 - 邀请你一起挑战！',
                         text: '快来一起玩这个有趣的逻辑推理游戏吧！',
@@ -3010,18 +3009,20 @@ function openShareModal() {
                         soundEffects.playStoryProgress();
                         unlockFullExplanation();
                     }).catch((err) => {
-                        // 用户取消分享或分享失败
-                        console.log('分享取消或失败:', err);
+                        // 用户取消分享，显示弹窗让用户复制链接
+                        console.log('分享取消:', err);
+                        // 显示复制链接弹窗
+                        shareLinkInput.value = shareLink;
+                        shareModal.classList.add('active');
+                        soundEffects.playStoryProgress();
                     });
                     return;
-                } else {
-                    // 不支持Web Share API，提示复制链接
-                    alert('📱 您的浏览器不支持直接分享\n\n请复制以下链接分享给好友：\n' + shareLink);
+                } catch (err) {
+                    console.error('Web Share API调用失败:', err);
+                    // 降级显示复制链接弹窗
                 }
-            } catch (err) {
-                console.error('分享失败:', err);
-                alert('📱 请复制链接分享给好友：\n' + shareLink);
             }
+            // 不支持Web Share API或调用失败，显示复制链接弹窗
         }
     }
     
